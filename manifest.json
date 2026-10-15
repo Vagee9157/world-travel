@@ -1,0 +1,9 @@
+{
+  "name": "环游世界 · 旅行卡片",
+  "short_name": "环游世界",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f5f0e6",
+  "theme_color": "#1f3a5f",
+  "icons": [{ "src": "assets/icon.svg", "sizes": "any", "type": "image/svg+xml" }]
+}

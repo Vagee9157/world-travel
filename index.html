@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>环游世界 · 旅行卡片</title>
+<meta name="description" content="一张卡片一个目的地：行程、航班、热门城市、人文景点和当地语言。">
+<meta name="theme-color" content="#f5f0e6" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#16181c" media="(prefers-color-scheme: dark)">
+<link rel="icon" href="assets/icon.svg" type="image/svg+xml">
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="assets/css/style.css?v=1">
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="#/">
+    <span class="brand-mark" aria-hidden="true"></span>
+    <span>环游世界</span>
+  </a>
+  <nav class="topnav" id="topnav"></nav>
+</header>
+<main id="app" tabindex="-1"></main>
+<div class="modal" id="modal" hidden>
+  <div class="modal-backdrop" data-close></div>
+  <article class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modal-title" id="modal-card"></article>
+</div>
+<footer class="foot">
+  <p>内容整理自公开资料，签证、票价、开放时间等经常变化，出发前请以官方信息为准。</p>
+</footer>
+<script src="assets/data/index.js?v=1"></script>
+<script src="assets/js/app.js?v=1"></script>
+</body>
+</html>
