@@ -50,7 +50,10 @@
   function photo(c, key, cls, withCredit) {
     const im = imgOf(c, key);
     if (!im) return null;
-    return el('figure', { class: 'photo' + (cls ? ' ' + cls : '') },
+    return el('figure', {
+      class: 'photo zoomable' + (cls ? ' ' + cls : ''),
+      onclick: (e) => { e.stopPropagation(); openLightbox([im], 0); }
+    },
       el('img', { src: im.src, alt: im.alt || '', loading: 'lazy', decoding: 'async' }),
       withCredit === false ? null : credit(im));
   }
@@ -61,7 +64,7 @@
     if (!meta || meta.status !== 'live' || !meta.file) return Promise.reject(new Error('unknown country'));
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = meta.file + '?v=2';
+      s.src = meta.file + '?v=3';
       s.onload = () => TRAVEL.countries[id] ? resolve(TRAVEL.countries[id]) : reject(new Error('not registered'));
       s.onerror = () => reject(new Error('load failed'));
       document.head.append(s);
@@ -199,7 +202,6 @@
 
   // ---------- 国家页 ----------
   let current = null;
-  let sectionObserver = null;
   function setTheme(theme) {
     const r = document.documentElement.style;
     if (theme) { r.setProperty('--accent', theme.accent); r.setProperty('--accent2', theme.accent2); }
@@ -225,13 +227,57 @@
       ['language', '语言', `${c.language.name}速成：认字母、学句子、听发音`, language],
       ['practical', '实用信息', 'App、付钱、上网、看病', practical],
       ['checklist', '出发清单', '勾选进度保存在本机浏览器', checklist],
-      c.images && ['credits', '图片来源', '均为 Wikimedia Commons 上的自由许可图片', credits]
+      c.images && ['credits', '相册', '点开看大图，图片均为 Wikimedia Commons 上的自由许可作品', credits]
     ].filter(Boolean);
-    const navLabel = { cities: '城市', credits: '图片' };
-    const navButtons = secs.map(([id, label]) => el('button', {
-      type: 'button', 'data-sec': id,
-      onclick: () => document.getElementById('sec-' + id).scrollIntoView({ behavior: 'smooth' })
-    }, navLabel[id] || label));
+    const navLabel = { credits: '相册' };
+    const label = (sec) => navLabel[sec[0]] || sec[1];
+    const tabKey = 'tab:' + c.id;
+    const navWrap = el('div', { class: 'wrap', role: 'tablist', 'aria-label': '章节' });
+    const subnav = el('nav', { class: 'subnav' }, navWrap);
+    const navButtons = secs.map((sec) => el('button', {
+      type: 'button', role: 'tab', 'data-sec': sec[0], 'aria-controls': 'sec-' + sec[0],
+      onclick: () => showTab(sec[0], true)
+    }, label(sec)));
+    navWrap.append(...navButtons);
+
+    // 章节做成标签页：一次只显示一个，底部有上一章 / 下一章
+    const panels = secs.map(([id, title, desc, fn], i) => {
+      const panel = section(id, i + 1, title, desc, fn(c));
+      panel.setAttribute('role', 'tabpanel');
+      const prev = secs[i - 1], next = secs[i + 1];
+      panel.append(el('div', { class: 'pager' },
+        prev ? el('button', { type: 'button', class: 'pg prev', onclick: () => showTab(prev[0], true) }, el('small', null, '上一章'), '← ' + label(prev)) : el('span'),
+        next ? el('button', { type: 'button', class: 'pg next', onclick: () => showTab(next[0], true) }, el('small', null, '下一章'), label(next) + ' →') : el('span')));
+      return panel;
+    });
+
+    function showTab(id, byUser) {
+      store.set(tabKey, id);
+      panels.forEach((p) => { p.hidden = p.id !== 'sec-' + id; });
+      navButtons.forEach((b) => {
+        const on = b.dataset.sec === id;
+        b.classList.toggle('on', on);
+        b.setAttribute('aria-selected', String(on));
+        b.tabIndex = on ? 0 : -1;
+      });
+      const btn = navButtons.find((b) => b.dataset.sec === id);
+      if (btn) {
+        const wr = navWrap.getBoundingClientRect(), br = btn.getBoundingClientRect();
+        navWrap.scrollTo({ left: navWrap.scrollLeft + (br.left - wr.left) - (navWrap.clientWidth - br.width) / 2, behavior: byUser ? 'smooth' : 'auto' });
+      }
+      if (byUser) {
+        // 已经往下滚了就回到标签栏下方，从新章节开头看
+        const top = subnav.getBoundingClientRect().top + window.scrollY - document.querySelector('.topbar').offsetHeight;
+        if (window.scrollY > top) window.scrollTo({ top, behavior: 'auto' });
+      }
+    }
+    // 左右方向键在标签之间切换
+    navWrap.addEventListener('keydown', (e) => {
+      if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+      const i = navButtons.findIndex((b) => b.classList.contains('on'));
+      const n = navButtons[(i + (e.key === 'ArrowRight' ? 1 : -1) + navButtons.length) % navButtons.length];
+      n.focus(); showTab(n.dataset.sec, true);
+    });
 
     const cover = imgOf(c, 'cover');
     app.replaceChildren(
@@ -243,21 +289,12 @@
             el('p', { class: 'tagline' }, c.tagline),
             el('p', { class: 'intro' }, c.intro)),
           cover ? photo(c, 'cover', 'hero-photo') : null)),
-      el('nav', { class: 'subnav', 'aria-label': '章节' }, el('div', { class: 'wrap' }, navButtons)),
-      el('div', { class: 'wrap' }, secs.map(([id, title, desc, fn], i) => section(id, i + 1, title, desc, fn(c))))
+      subnav,
+      el('div', { class: 'wrap' }, panels)
     );
-
-    if (sectionObserver) sectionObserver.disconnect();
-    sectionObserver = new IntersectionObserver((entries) => {
-      entries.forEach((en) => {
-        if (!en.isIntersecting) return;
-        const id = en.target.id.replace('sec-', '');
-        navButtons.forEach((b) => b.classList.toggle('on', b.dataset.sec === id));
-        const on = navButtons.find((b) => b.dataset.sec === id);
-        if (on) on.scrollIntoView({ block: 'nearest', inline: 'center' });
-      });
-    }, { rootMargin: '-45% 0px -50% 0px' });
-    document.querySelectorAll('.section').forEach((s) => sectionObserver.observe(s));
+    let start = store.get(tabKey, 'overview');
+    if (!secs.some((x) => x[0] === start)) start = 'overview';
+    showTab(start, false);
   }
 
   function section(id, n, title, desc, ...body) {
@@ -451,14 +488,32 @@
     ];
   }
 
+  // 相册：所有图片直接铺开，按类型筛选，点开在页内看大图
   function credits(c) {
-    const list = Object.entries(c.images);
-    return el('div', { class: 'card credits' },
-      el('p', null, `本页 ${list.length} 张图片均来自 Wikimedia Commons，按各自的知识共享许可使用，点击查看原图和许可。`),
-      el('ol', null, list.map(([, im]) => el('li', null,
-        el('a', { href: im.source, target: '_blank', rel: 'noopener noreferrer' }, im.alt || im.source),
-        ' — ', im.credit, ' · ',
-        im.licenseUrl ? el('a', { href: im.licenseUrl, target: '_blank', rel: 'noopener noreferrer' }, im.license) : im.license))));
+    const kindOf = (k) => k === 'cover' || k.startsWith('city/') ? '城市' : k.startsWith('food/') ? '美食' : k.startsWith('stay/') ? '住宿' : '景点';
+    const all = Object.entries(c.images).map(([k, im]) => ({ ...im, kind: kindOf(k) }));
+    const kinds = ['全部', ...['城市', '景点', '美食', '住宿'].filter((k) => all.some((x) => x.kind === k))];
+    let kind = '全部';
+    const grid = el('div', { class: 'gallery' });
+    const draw = () => {
+      const list = all.filter((x) => kind === '全部' || x.kind === kind);
+      grid.replaceChildren(...list.map((im, i) => el('button', {
+        type: 'button', class: 'g-item', onclick: () => openLightbox(list, i), 'aria-label': `看大图：${im.alt}`
+      },
+        el('img', { src: im.src, alt: '', loading: 'lazy', decoding: 'async' }),
+        el('span', { class: 'g-cap' }, el('b', null, im.alt), el('small', null, `${im.credit} · ${im.license}`)))));
+    };
+    const chips = el('div', { class: 'chips' }, kinds.map((k) => el('button', {
+      class: 'chip', type: 'button', 'aria-pressed': String(k === kind),
+      onclick: (e) => {
+        kind = k;
+        chips.querySelectorAll('.chip').forEach((x) => x.setAttribute('aria-pressed', String(x === e.currentTarget)));
+        draw();
+      }
+    }, k === '全部' ? `全部 ${all.length}` : `${k} ${all.filter((x) => x.kind === k).length}`)));
+    draw();
+    return [chips, grid,
+      el('p', { class: 'meta-line', style: { 'margin-top': '14px' } }, '图片作者和许可写在每张图下方，大图里可以打开原图页面查看许可全文。')];
   }
 
   function culture(c) {
@@ -628,6 +683,50 @@
     return [meta, list];
   }
 
+  // ---------- 看大图 ----------
+  const lb = el('div', { class: 'lightbox', role: 'dialog', 'aria-modal': 'true', 'aria-label': '看大图' });
+  lb.hidden = true;
+  document.body.append(lb);
+  let lbList = [], lbIdx = 0, lbFocus = null, touchX = null;
+  function openLightbox(list, i) {
+    lbList = list; lbIdx = i; lbFocus = document.activeElement;
+    drawLightbox();
+    lb.hidden = false;
+    document.body.style.overflow = 'hidden';
+    lb.querySelector('.lb-close').focus();
+  }
+  function drawLightbox() {
+    const im = lbList[lbIdx];
+    const many = lbList.length > 1;
+    lb.replaceChildren(
+      el('div', { class: 'lb-backdrop', onclick: closeLightbox }),
+      el('figure', { class: 'lb-fig' },
+        el('img', { src: im.src, alt: im.alt || '' }),
+        el('figcaption', null,
+          el('b', null, im.alt),
+          el('span', null, (many ? `${lbIdx + 1} / ${lbList.length} · ` : '') + `图：${im.credit} · ${im.license} · `,
+            el('a', { href: im.source, target: '_blank', rel: 'noopener noreferrer' }, '原图与许可')))),
+      el('button', { class: 'lb-close', type: 'button', 'aria-label': '关闭', onclick: closeLightbox }, '✕'),
+      many ? [
+        el('button', { class: 'lb-nav prev', type: 'button', 'aria-label': '上一张', onclick: () => stepLightbox(-1) }, '‹'),
+        el('button', { class: 'lb-nav next', type: 'button', 'aria-label': '下一张', onclick: () => stepLightbox(1) }, '›')
+      ] : null);
+  }
+  function stepLightbox(d) { lbIdx = (lbIdx + d + lbList.length) % lbList.length; drawLightbox(); }
+  function closeLightbox() {
+    if (lb.hidden) return;
+    lb.hidden = true;
+    document.body.style.overflow = modal.hidden ? '' : 'hidden';
+    if (lbFocus && document.contains(lbFocus)) lbFocus.focus();
+  }
+  lb.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
+  lb.addEventListener('touchend', (e) => {
+    if (touchX == null || lbList.length < 2) return;
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) stepLightbox(dx < 0 ? 1 : -1);
+    touchX = null;
+  });
+
   // ---------- 城市详情弹窗 ----------
   let lastFocus = null;
   function openCity(c, cityId, fromRoute) {
@@ -698,7 +797,15 @@
   }
 
   modal.addEventListener('click', (e) => { if (e.target.hasAttribute('data-close')) closeCity(); });
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeCity(); });
+  document.addEventListener('keydown', (e) => {
+    if (!lb.hidden) {
+      if (e.key === 'Escape') closeLightbox();
+      else if (e.key === 'ArrowRight') stepLightbox(1);
+      else if (e.key === 'ArrowLeft') stepLightbox(-1);
+      return;
+    }
+    if (e.key === 'Escape') closeCity();
+  });
 
   // ---------- 路由 ----------
   // #/            首页
@@ -708,6 +815,7 @@
     const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
     const [cid, cityId] = parts;
     if (!modal.hidden) { modal.hidden = true; document.body.style.overflow = ''; }
+    if (!lb.hidden) { lb.hidden = true; document.body.style.overflow = ''; }
     if (!cid || !byId[cid] || byId[cid].status !== 'live') {
       current = null;
       renderHome();
