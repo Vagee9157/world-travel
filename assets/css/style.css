@@ -42,7 +42,7 @@
     --dont: #e07a64;
     --info: #79a8d6;
     --accent: color-mix(in srgb, var(--accent-base, #1f3a5f) 45%, #e8edf2);
-    --accent2: color-mix(in srgb, var(--accent2-base, #b8321f) 60%, #ffe2d8);
+    --accent2: color-mix(in srgb, var(--accent2-base, #b8321f) 40%, #f2ece6);
     --globe-ocean: #1b2a36;
     --globe-ocean-hi: #2a3f4d;
     --globe-land: #4a4640;
@@ -570,7 +570,19 @@ a.dest-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift);
 .foot { padding-bottom: max(48px, calc(env(safe-area-inset-bottom) + 24px)); }
 
 
+/* ---------- itinerary spot links ---------- */
+.day-spots { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin-top: 10px; padding-top: 10px; border-top: 1px dashed var(--line); }
+.day-spots > span { font-size: 12px; color: var(--muted); margin-right: 2px; }
+.day-spots .chip { padding: 4px 11px; font-size: 12.5px; color: var(--accent); }
+.spot.flash { animation: flash 1.6s ease; }
+@keyframes flash { 0%, 60% { box-shadow: 0 0 0 3px var(--accent2); } 100% { box-shadow: var(--shadow); } }
+.modal-scroll { position: relative; }
+
 /* ---------- QA fixes ---------- */
+@media (pointer: coarse) {
+  .chip, .mode button, .ph-actions button, .pill { min-height: 40px; }
+  .day-spots .chip { min-height: 36px; }
+}
 @media (prefers-color-scheme: dark) {
   .pc-local, .stamp, .dc-local, .dc-tag, .dc-go, .pill[aria-pressed="true"] { color: color-mix(in srgb, var(--pc) 50%, #fff); }
   .stamp { border-color: color-mix(in srgb, var(--pc) 55%, #fff); }
@@ -583,7 +595,7 @@ a.dest-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift);
   background: radial-gradient(120% 120% at 100% 0%, color-mix(in srgb, var(--accent2) 14%, transparent), transparent 60%), var(--card-2);
 }
 .stay-photo.dish-type { aspect-ratio: 16 / 9; font-size: 24px; }
-.day-more { margin-left: auto; border: 0; background: none; cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 600; padding: 6px 0; }
+.day-more { margin-left: auto; border: 0; background: none; cursor: pointer; color: var(--accent); font-size: 13px; font-weight: 600; padding: 8px 0; min-height: 40px; }
 .notice {
   margin-top: 18px; max-width: 720px; padding: 12px 16px; border-radius: 12px;
   background: color-mix(in srgb, var(--accent2) 9%, var(--card)); border: 1px solid color-mix(in srgb, var(--accent2) 35%, var(--line));
@@ -610,8 +622,6 @@ a.dest-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift);
   .tabs { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; margin-left: -16px; margin-right: -16px; padding: 0 16px 4px; scroll-snap-type: x proximity; }
   .tabs::-webkit-scrollbar { display: none; }
   .tab { flex: 0 0 72%; max-width: none; scroll-snap-align: start; }
-  .day-top { flex-wrap: wrap; }
-  .day-more { margin-left: 0; }
   .notice { padding: 10px 12px; }
 }
 
@@ -764,7 +774,10 @@ a.dest-card:hover { transform: translateY(-3px); box-shadow: var(--shadow-lift);
   .gallery { grid-template-columns: 1fr 1fr; gap: 8px; }
   .g-cap { padding: 22px 8px 7px; }
   .g-cap b { font-size: 12px; }
-  .lb-nav { display: none; }
+  .lb-nav { width: 36px; height: 36px; font-size: 24px; margin-top: -18px; background: rgba(255,255,255,.1); }
+  .lb-nav.prev { left: 4px; }
+  .lb-nav.next { right: 4px; }
+  .c-hero::before { display: none; }
   .pg { font-size: 15px; padding: 9px 12px; }
   .subnav button { padding: 12px 10px 10px; }
   .topnav a { padding: 6px 10px; }

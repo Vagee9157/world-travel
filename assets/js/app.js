@@ -68,7 +68,7 @@
     if (!meta || meta.status !== 'live' || !meta.file) return Promise.reject(new Error('unknown country'));
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = meta.file + '?v=4';
+      s.src = meta.file + '?v=5';
       s.onload = () => TRAVEL.countries[id] ? resolve(TRAVEL.countries[id]) : reject(new Error('not registered'));
       s.onerror = () => reject(new Error('load failed'));
       document.head.append(s);
@@ -475,9 +475,12 @@
             el('div', { class: 'card' },
               el('div', { class: 'day-top' },
                 el('span', { class: 'day-city' }, `第 ${i + 1} 天 · ${cityName(c, d.city)}`),
-                el('h4', null, d.title),
-                el('button', { type: 'button', class: 'day-more', onclick: () => openCity(c, d.city) }, cityName(c, d.city) + '景点 →')),
-              el('ul', null, d.items.map((t) => el('li', null, t))))))));
+                el('h4', null, d.title)),
+              el('ul', null, d.items.map((t) => el('li', null, t))),
+              el('div', { class: 'day-spots' },
+                d.spots && d.spots.length ? el('span', null, '当天景点') : null,
+                (d.spots || []).map((name) => el('button', { type: 'button', class: 'chip', onclick: () => openCity(c, d.city, false, name) }, name)),
+                el('button', { type: 'button', class: 'day-more', onclick: () => openCity(c, d.city) }, `${cityName(c, d.city)}全部景点 →`)))))));
     };
     draw();
     return [tabs, panel];
@@ -811,9 +814,11 @@
   lb.hidden = true;
   document.body.append(lb);
   let lbList = [], lbIdx = 0, lbFocus = null, touchX = null;
+  let lbPushed = false;
   function openLightbox(list, i, from) {
     lbList = list; lbIdx = i; lbFocus = from || document.activeElement;
     drawLightbox();
+    if (!lbPushed) { history.pushState({ lb: 1 }, '', location.href); lbPushed = true; }
     lb.hidden = false;
     document.body.style.overflow = 'hidden';
     syncInert();
@@ -825,7 +830,7 @@
     lb.replaceChildren(
       el('div', { class: 'lb-backdrop', onclick: closeLightbox }),
       el('figure', { class: 'lb-fig' },
-        el('img', { src: im.src, alt: im.alt || '' }),
+        lbImage(im),
         el('figcaption', null,
           el('b', null, im.alt),
           el('span', null, (many ? `${lbIdx + 1} / ${lbList.length} · ` : '') + `图：${im.credit} · ${im.license} · `,
@@ -835,6 +840,14 @@
         el('button', { class: 'lb-nav prev', type: 'button', 'aria-label': '上一张', onclick: () => stepLightbox(-1) }, '‹'),
         el('button', { class: 'lb-nav next', type: 'button', 'aria-label': '下一张', onclick: () => stepLightbox(1) }, '›')
       ] : []));
+  }
+  // 先放缩略图（已缓存，马上出来），原图下载完再换上
+  function lbImage(im) {
+    const img = el('img', { src: thumbOf(im), alt: im.alt || '' });
+    const full = new Image();
+    full.onload = () => { if (img.isConnected) img.src = im.src; };
+    full.src = im.src;
+    return img;
   }
   function stepLightbox(d) {
     const was = document.activeElement && document.activeElement.classList;
@@ -846,11 +859,18 @@
   }
   function closeLightbox() {
     if (lb.hidden) return;
+    hideLightbox();
+    if (lbPushed) { lbPushed = false; history.back(); }
+  }
+  function hideLightbox() {
     lb.hidden = true;
     document.body.style.overflow = modal.hidden ? '' : 'hidden';
     syncInert();
     if (lbFocus && document.contains(lbFocus)) lbFocus.focus();
   }
+  window.addEventListener('popstate', () => {
+    if (!lb.hidden && lbPushed) { lbPushed = false; hideLightbox(); }
+  });
   lb.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
   lb.addEventListener('touchend', (e) => {
     if (touchX == null || lbList.length < 2) return;
@@ -870,7 +890,7 @@
 
   // 自己打开的弹窗记一条历史，手机返回键 / 侧滑能关掉它
   let cityPushed = false;
-  function openCity(c, cityId, fromRoute) {
+  function openCity(c, cityId, fromRoute, focusSpot) {
     const city = c.cities.find((x) => x.id === cityId);
     if (!city) return;
     if (!fromRoute) {
@@ -883,7 +903,7 @@
     let type = '全部';
     const spotList = el('div', { class: 'grid' });
     const drawSpots = () => spotList.replaceChildren(...city.spots.filter((s) => type === '全部' || s.type === type).map((s) =>
-      el('div', { class: 'card spot' + (imgOf(c, s.img) ? ' has-img' : '') },
+      el('div', { class: 'card spot' + (imgOf(c, s.img) ? ' has-img' : ''), 'data-spot': s.name },
         photo(c, s.img, 'spot-photo', true, true),
         el('div', { class: 'spot-text' },
           el('div', { class: 'spot-top' },
@@ -932,21 +952,31 @@
     modalCard.style.transform = '';
     document.body.style.overflow = 'hidden';
     syncInert();
-    modalCard.querySelector('.modal-scroll').scrollTop = 0;
+    const scroller = modalCard.querySelector('.modal-scroll');
+    scroller.scrollTop = 0;
     modalCard.querySelector('.modal-close').focus();
+    // 从行程点进来的：滚到那个景点并闪一下
+    const target = focusSpot && [...spotList.children].find((n) => n.dataset.spot === focusSpot);
+    if (target) {
+      requestAnimationFrame(() => {
+        scroller.scrollTop = target.offsetTop - 70;
+        target.classList.add('flash');
+        setTimeout(() => target.classList.remove('flash'), 1600);
+      });
+    }
   }
 
   function hideCity() {
     modal.hidden = true;
     document.body.style.overflow = '';
     syncInert();
+    if (lastFocus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
   }
   function closeCity() {
     if (modal.hidden) return;
     hideCity();
     if (cityPushed) { cityPushed = false; history.back(); }
     else if (current) history.replaceState(null, '', '#/' + current);
-    if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
   }
 
   // 手机上在弹窗顶部往下拉可以关闭
@@ -987,7 +1017,7 @@
     renderToken++;
     const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
     const [cid, cityId] = parts;
-    if (!lb.hidden) { lb.hidden = true; document.body.style.overflow = ''; syncInert(); }
+    if (!lb.hidden) { lb.hidden = true; lbPushed = false; document.body.style.overflow = ''; syncInert(); }
     if (!modal.hidden && !(parts[1] && parts[0] === current)) hideCity();
     if (!parts[1]) cityPushed = false;
     if (!cid || !byId[cid] || byId[cid].status !== 'live') {
