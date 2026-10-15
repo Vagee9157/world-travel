@@ -67,10 +67,26 @@ for (const meta of index) {
     seen.add(p.local);
   }));
 
+  // 图片：引用的 key 要在 images 里，文件要存在，许可只收 PD / CC0 / CC BY / CC BY-SA
+  const imgs = c.images || {};
+  const OK_LICENSE = /^(public domain|pd|cc0|cc by(-sa)? [\d.]+|cc by(-sa)?)/i;
+  Object.entries(imgs).forEach(([k, im]) => {
+    need(im, ['src', 'alt', 'credit', 'license', 'source'], `${c.id}/images/${k}`);
+    if (im.src && !fs.existsSync(path.join(__dirname, im.src))) err(`${c.id}/images/${k}`, `文件不存在：${im.src}`);
+    if (im.license && (!OK_LICENSE.test(im.license) || /nc|nd/i.test(im.license.replace(/^cc by(-sa)?/i, '')))) err(`${c.id}/images/${k}`, `许可不在白名单：${im.license}`);
+  });
+  const refs = [];
+  (c.cities || []).forEach((city) => { refs.push([city.img, `cities/${city.id}`]); (city.spots || []).forEach((s) => refs.push([s.img, `cities/${city.id}/${s.name}`])); });
+  (c.foodGuide || []).forEach((f) => refs.push([f.img, `foodGuide/${f.name}`]));
+  (c.stays || []).forEach((f) => refs.push([f.img, `stays/${f.type}`]));
+  refs.forEach(([k, w]) => { if (k && !imgs[k]) err(`${c.id}/${w}`, `img 引用了不存在的图片 ${k}`); });
+  (c.festivals || []).forEach((f, i) => need(f, ['name', 'month', 'city', 'desc'], `${c.id}/festivals[${i}]`));
+  (c.foodGuide || []).forEach((f, i) => need(f, ['name', 'local', 'desc'], `${c.id}/foodGuide[${i}]`));
+
   const nCities = (c.cities || []).length;
   const nSpots = (c.cities || []).reduce((n, x) => n + (x.spots || []).length, 0);
   const nPhrases = (L.phrases || []).reduce((n, g) => n + g.items.length, 0);
-  console.log(`✓ ${c.name}：${nCities} 城市 / ${nSpots} 景点 / ${(c.itineraries || []).length} 行程 / ${nPhrases} 句`);
+  console.log(`✓ ${c.name}：${nCities} 城市 / ${nSpots} 景点 / ${(c.itineraries || []).length} 行程 / ${nPhrases} 句 / ${Object.keys(imgs).length} 图`);
 }
 
 if (errors.length) {

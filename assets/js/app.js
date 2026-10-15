@@ -38,13 +38,30 @@
     set(k, v) { try { localStorage.setItem('wt:' + k, JSON.stringify(v)); } catch (e) { /* 隐私模式等情况下忽略 */ } }
   };
 
+  // ---------- 图片 ----------
+  // 图片清单在各国数据的 images 里，按 key 引用；每张都带作者、许可和出处。
+  function imgOf(c, key) { return key && c && c.images && c.images[key] ? c.images[key] : null; }
+  function credit(im) {
+    return el('a', {
+      class: 'credit', href: im.source, target: '_blank', rel: 'noopener noreferrer',
+      title: `图片：${im.credit} · ${im.license}`, onclick: (e) => e.stopPropagation()
+    }, '© ', im.credit, ' · ', im.license);
+  }
+  function photo(c, key, cls, withCredit) {
+    const im = imgOf(c, key);
+    if (!im) return null;
+    return el('figure', { class: 'photo' + (cls ? ' ' + cls : '') },
+      el('img', { src: im.src, alt: im.alt || '', loading: 'lazy', decoding: 'async' }),
+      withCredit === false ? null : credit(im));
+  }
+
   function loadCountry(id) {
     if (TRAVEL.countries[id]) return Promise.resolve(TRAVEL.countries[id]);
     const meta = byId[id];
     if (!meta || meta.status !== 'live' || !meta.file) return Promise.reject(new Error('unknown country'));
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = meta.file + '?v=1';
+      s.src = meta.file + '?v=2';
       s.onload = () => TRAVEL.countries[id] ? resolve(TRAVEL.countries[id]) : reject(new Error('not registered'));
       s.onerror = () => reject(new Error('load failed'));
       document.head.append(s);
@@ -55,7 +72,7 @@
   const canSpeak = 'speechSynthesis' in window;
   function speak(text, lang) {
     if (!canSpeak) return;
-    const u = new SpeechSynthesisUtterance(text.replace(/〜|~/g, ''));
+    const u = new SpeechSynthesisUtterance(text.replace(/（[^）]*）|\([^)]*\)/g, '').replace(/〜|~/g, ''));
     u.lang = lang;
     const prefix = lang.slice(0, 2);
     const voice = speechSynthesis.getVoices().find((v) => v.lang.replace('_', '-').toLowerCase().startsWith(prefix));
@@ -155,11 +172,13 @@
         el('div', { class: 'pc-en' }, meta.nameEn))
     ];
     if (meta.status === 'live' && c) {
+      const cover = imgOf(c, 'cover');
+      if (cover) inner.unshift(el('img', { class: 'pc-bg', src: cover.src, alt: '', loading: 'lazy', decoding: 'async' }));
       inner.push(el('div', { class: 'pc-meta' },
         el('span', null, el('b', null, c.cities.length), ' 座城市'),
         el('span', null, el('b', null, c.itineraries.length), ' 条行程'),
         el('span', null, el('b', null, c.language.name))));
-      return el('a', { class: 'postcard', href: '#/' + meta.id, style: { '--pc': meta.accent } }, inner);
+      return el('a', { class: 'postcard' + (cover ? ' has-img' : ''), href: '#/' + meta.id, style: { '--pc': meta.accent } }, inner);
     }
     inner.push(el('span', { class: 'soon-tag' }, '筹备中'));
     return el('div', { class: 'postcard soon', style: { '--pc': meta.accent }, 'aria-disabled': 'true' }, inner);
@@ -181,11 +200,6 @@
   // ---------- 国家页 ----------
   let current = null;
   let sectionObserver = null;
-  const SECTIONS = [
-    ['overview', '速览'], ['itinerary', '行程'], ['flights', '航班交通'], ['cities', '城市'],
-    ['culture', '人文礼仪'], ['language', '语言'], ['practical', '实用信息'], ['checklist', '出发清单']
-  ];
-
   function setTheme(theme) {
     const r = document.documentElement.style;
     if (theme) { r.setProperty('--accent', theme.accent); r.setProperty('--accent2', theme.accent2); }
@@ -198,28 +212,39 @@
     setTheme(c.theme);
     renderTopnav(c.id);
 
-    const navButtons = SECTIONS.map(([id, label]) => el('button', {
+    // 章节按数据有无决定是否出现，编号自动排
+    const secs = [
+      ['overview', '速览', '什么时候去、要准备什么、大概花多少钱', overview],
+      ['itinerary', '行程', '照着走就行的路线，点城市名看详情', itineraries],
+      ['flights', '航班交通', '从国内怎么飞，落地后怎么走', flights],
+      ['cities', '城市', '点卡片看景点、美食和住哪', cities],
+      c.foodGuide && ['food', '美食', '必吃清单和吃饭的规矩', food],
+      c.festivals && ['festivals', '节庆', '一年里的祭典和季节活动', festivals],
+      (c.stays || c.shopping) && ['stay', '住宿购物', '住哪种、买什么、怎么免税', staysShopping],
+      ['culture', '人文礼仪', '入乡随俗，少踩坑', culture],
+      ['language', '语言', `${c.language.name}速成：认字母、学句子、听发音`, language],
+      ['practical', '实用信息', 'App、付钱、上网、看病', practical],
+      ['checklist', '出发清单', '勾选进度保存在本机浏览器', checklist],
+      c.images && ['credits', '图片来源', '均为 Wikimedia Commons 上的自由许可图片', credits]
+    ].filter(Boolean);
+    const navLabel = { cities: '城市', credits: '图片' };
+    const navButtons = secs.map(([id, label]) => el('button', {
       type: 'button', 'data-sec': id,
       onclick: () => document.getElementById('sec-' + id).scrollIntoView({ behavior: 'smooth' })
-    }, label));
+    }, navLabel[id] || label));
 
+    const cover = imgOf(c, 'cover');
     app.replaceChildren(
-      el('section', { class: 'c-hero', 'data-local': c.nameLocal },
-        el('div', { class: 'wrap' },
-          el('a', { class: 'back', href: '#/' }, '← 全部目的地'),
-          el('h1', null, c.name, el('span', { class: 'en' }, c.nameEn)),
-          el('p', { class: 'tagline' }, c.tagline),
-          el('p', { class: 'intro' }, c.intro))),
+      el('section', { class: 'c-hero' + (cover ? ' has-img' : ''), 'data-local': c.nameLocal },
+        el('div', { class: 'wrap c-hero-in' },
+          el('div', { class: 'c-hero-text' },
+            el('a', { class: 'back', href: '#/' }, '← 全部目的地'),
+            el('h1', null, c.name, el('span', { class: 'en' }, c.nameEn)),
+            el('p', { class: 'tagline' }, c.tagline),
+            el('p', { class: 'intro' }, c.intro)),
+          cover ? photo(c, 'cover', 'hero-photo') : null)),
       el('nav', { class: 'subnav', 'aria-label': '章节' }, el('div', { class: 'wrap' }, navButtons)),
-      el('div', { class: 'wrap' },
-        section('overview', 1, '速览', '什么时候去、要准备什么、大概花多少钱', overview(c)),
-        section('itinerary', 2, '行程', '照着走就行的路线，点城市名看详情', itineraries(c)),
-        section('flights', 3, '航班交通', '从国内怎么飞，落地后怎么走', flights(c)),
-        section('cities', 4, '热门城市', '点卡片看景点、美食和住哪', cities(c)),
-        section('culture', 5, '人文礼仪', '入乡随俗，少踩坑', culture(c)),
-        section('language', 6, '语言', `${c.language.name}速成：认字母、学句子、听发音`, language(c)),
-        section('practical', 7, '实用信息', 'App、付钱、退税、上网', practical(c)),
-        section('checklist', 8, '出发清单', '勾选进度保存在本机浏览器', checklist(c)))
+      el('div', { class: 'wrap' }, secs.map(([id, title, desc, fn], i) => section(id, i + 1, title, desc, fn(c))))
     );
 
     if (sectionObserver) sectionObserver.disconnect();
@@ -335,8 +360,11 @@
     ];
   }
 
-  function cityHead(c, city, Tag) {
-    return el('div', { class: 'city-head' },
+  function cityHead(c, city, Tag, withCredit) {
+    const im = imgOf(c, city.img);
+    return el('div', { class: 'city-head' + (im ? ' has-img' : '') },
+      im ? el('img', { class: 'head-bg', src: im.src, alt: im.alt || '', loading: withCredit ? 'eager' : 'lazy', decoding: 'async' }) : null,
+      im && withCredit ? credit(im) : null,
       el('span', { class: city.local.length > 3 ? 'big long' : 'big', 'aria-hidden': 'true' }, city.local),
       el('span', { class: 'area' }, city.area),
       el(Tag, null, city.name),
@@ -361,6 +389,76 @@
           el('span', { class: 'more' }, `${city.spots.length} 个景点 →`))));
       return card;
     }));
+  }
+
+  function food(c) {
+    return [
+      el('div', { class: 'foods' }, c.foodGuide.map((f) =>
+        el('div', { class: 'card dish' + (imgOf(c, f.img) ? ' has-img' : '') },
+          photo(c, f.img, 'dish-photo'),
+          el('div', { class: 'dish-text' },
+            el('div', { class: 'dish-top' },
+              el('h4', null, f.name),
+              el('span', { class: 'lc', lang: c.lang.code }, f.local)),
+            el('p', null, f.desc),
+            f.where ? el('p', { class: 'meta-line' }, el('b', null, '去哪吃 '), f.where) : null,
+            f.price ? el('p', { class: 'meta-line' }, el('b', null, '人均 '), f.price) : null)))),
+      c.dining ? [
+        el('h3', { class: 'sub-h' }, '在日本吃饭要知道的'),
+        el('div', { class: 'grid g-3' }, c.dining.map((d) =>
+          el('div', { class: 'card tipcard' },
+            el('div', { class: 'e-ico', 'aria-hidden': 'true' }, d.icon),
+            el('h4', null, d.title),
+            el('p', null, d.desc))))
+      ] : null
+    ];
+  }
+
+  function festivals(c) {
+    return el('div', { class: 'fests' }, c.festivals.map((f) =>
+      el('div', { class: 'card fest' },
+        el('div', { class: 'fest-month' }, f.month),
+        el('h4', null, f.name, el('small', { lang: c.lang.code }, f.local)),
+        el('div', { class: 'fest-city' }, f.city),
+        el('p', null, f.desc),
+        f.tip ? el('p', { class: 'stip' }, f.tip) : null)));
+  }
+
+  function staysShopping(c) {
+    return [
+      c.stays ? [
+        el('h3', { class: 'sub-h first' }, '住哪种'),
+        el('div', { class: 'grid g-3' }, c.stays.map((s) =>
+          el('div', { class: 'card stay' + (imgOf(c, s.img) ? ' has-img' : '') },
+            photo(c, s.img, 'stay-photo'),
+            el('div', { class: 'stay-text' },
+              el('div', { class: 'stay-top' },
+                el('span', { class: 'e-ico', 'aria-hidden': 'true' }, s.icon),
+                el('h4', null, s.type, el('small', { lang: c.lang.code }, s.local))),
+              el('p', null, s.desc),
+              s.price ? el('p', { class: 'meta-line' }, el('b', null, '每晚 '), s.price) : null,
+              s.tip ? el('p', { class: 'stip' }, s.tip) : null))))
+      ] : null,
+      c.shopping ? [
+        el('h3', { class: 'sub-h' }, '买什么'),
+        el('div', { class: 'grid g-3' }, c.shopping.map((s) =>
+          el('div', { class: 'card tipcard' },
+            el('div', { class: 'e-ico', 'aria-hidden': 'true' }, s.icon),
+            el('h4', null, s.title),
+            el('p', null, s.desc),
+            s.where ? el('p', { class: 'meta-line' }, el('b', null, '去哪买 '), s.where) : null)))
+      ] : null
+    ];
+  }
+
+  function credits(c) {
+    const list = Object.entries(c.images);
+    return el('div', { class: 'card credits' },
+      el('p', null, `本页 ${list.length} 张图片均来自 Wikimedia Commons，按各自的知识共享许可使用，点击查看原图和许可。`),
+      el('ol', null, list.map(([, im]) => el('li', null,
+        el('a', { href: im.source, target: '_blank', rel: 'noopener noreferrer' }, im.alt || im.source),
+        ' — ', im.credit, ' · ',
+        im.licenseUrl ? el('a', { href: im.licenseUrl, target: '_blank', rel: 'noopener noreferrer' }, im.license) : im.license))));
   }
 
   function culture(c) {
@@ -477,6 +575,20 @@
             el('div', { class: 'kana' }, s.chars.map(([ch, ro]) =>
               el('button', { type: 'button', lang: code, 'aria-label': `${ch} ${ro}`, onclick: () => speak(ch, code) },
                 el('b', null, ch), el('small', null, ro)))))))),
+      (L.numbers || L.vocab) ? el('div', { class: 'lang-extra' },
+        L.numbers ? el('div', { class: 'card nums-card' },
+          el('h4', null, '数字'),
+          el('div', { class: 'nums' }, L.numbers.map((n) =>
+            el('button', { type: 'button', onclick: () => speak(n.local, code), 'aria-label': `${n.n} ${n.roman}` },
+              el('b', null, n.n), el('span', { lang: code }, n.local), el('small', null, n.roman)))),
+          L.priceNote ? el('p', { class: 'meta-line', style: { 'margin-top': '10px' } }, L.priceNote) : null) : null,
+        (L.vocab || []).map((g) => el('details', { class: 'card vocab' },
+          el('summary', null, el('span', { 'aria-hidden': 'true' }, g.icon), ' ', g.cat, el('small', null, `${g.items.length} 个`)),
+          el('ul', null, g.items.map((w) => el('li', null,
+            el('button', { type: 'button', class: 'say', 'aria-label': '朗读', onclick: () => speak(w.local, code), hidden: !canSpeak }, '🔊'),
+            el('b', { lang: code }, w.local),
+            el('span', { class: 'roman' }, w.roman),
+            el('span', { class: 'zh' }, w.zh))))))) : null,
       el('div', { class: 'lang-bar' }, chips, progress, modeBox),
       grid,
       canSpeak ? null : el('p', { class: 'empty', style: { 'margin-top': '10px' } }, '这个浏览器不支持朗读，换 Safari 或 Chrome 试试。')
@@ -528,13 +640,15 @@
     let type = '全部';
     const spotList = el('div', { class: 'grid' });
     const drawSpots = () => spotList.replaceChildren(...city.spots.filter((s) => type === '全部' || s.type === type).map((s) =>
-      el('div', { class: 'card spot' },
-        el('div', { class: 'spot-top' },
-          el('h5', null, s.name),
-          el('span', { class: 'lc', lang: c.lang.code }, s.local),
-          el('span', { class: 'type t-' + s.type }, s.type)),
-        el('p', null, s.desc),
-        s.tip ? el('p', { class: 'stip' }, s.tip) : null)));
+      el('div', { class: 'card spot' + (imgOf(c, s.img) ? ' has-img' : '') },
+        photo(c, s.img, 'spot-photo'),
+        el('div', { class: 'spot-text' },
+          el('div', { class: 'spot-top' },
+            el('h5', null, s.name),
+            el('span', { class: 'lc', lang: c.lang.code }, s.local),
+            el('span', { class: 'type t-' + s.type }, s.type)),
+          el('p', null, s.desc),
+          s.tip ? el('p', { class: 'stip' }, s.tip) : null))));
     const filter = el('div', { class: 'chips spot-filter' }, types.map((t) => el('button', {
       class: 'chip', type: 'button', 'aria-pressed': String(t === type),
       onclick: (e) => {
@@ -545,7 +659,7 @@
     }, t)));
     drawSpots();
 
-    const head = cityHead(c, city, 'h3');
+    const head = cityHead(c, city, 'h3', true);
     head.querySelector('h3').id = 'modal-title';
     modalCard.style.setProperty('--cc', city.color);
     modalCard.replaceChildren(

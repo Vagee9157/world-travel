@@ -8,7 +8,7 @@
 
 | 目的地 | 城市 | 行程 | 语言 |
 |---|---|---|---|
-| 🇯🇵 日本 | 东京、京都、大阪、奈良、富士山·箱根、札幌·小樽、冲绳 | 初访经典 7 天（东京进大阪出）/ 关西深度 5 天 / 北海道冬日 5 天 | 日语：平假名、片假名、35 句 |
+| 🇯🇵 日本 | 13 座：东京、京都、大阪、奈良、富士山·箱根、札幌·小樽、冲绳、镰仓·横滨、日光、金泽·白川乡、神户·姬路、广岛·宫岛、福冈；130 个景点 | 8 条：初访经典 7 天 / 关西深度 / 北海道冬日 / 关西+广岛 / 东京周边 / 大环线 12–14 天 / 冲绳 / 赏樱 | 日语：全套假名、数字、分类词汇、65 句；另有美食、节庆、住宿购物；74 张图 |
 | 🇰🇷 韩国 | 首尔、釜山、济州岛、庆州、全州 | 首尔经典 5 天 / 首尔 + 釜山 7 天 / 济州免签 4 天 | 韩语：韩文字母、35 句 |
 
 筹备中：泰国、新加坡、越南、法国、意大利、澳大利亚。
@@ -20,6 +20,7 @@
 | 速览 | 时差、货币、电源、紧急电话等关键信息；四季推荐度；签证入境；每日预算三档 |
 | 行程 | 多条可直接照走的路线，按天排成时间线，点城市名看详情 |
 | 航班交通 | 国内主要城市直飞时长和航司、主要机场怎么进城、订票技巧、当地交通 |
+| 美食 / 节庆 / 住宿购物 | 必吃清单配图、吃饭规矩；全年祭典；住宿类型、买什么、免税（有数据的国家才出现） |
 | 城市 | 城市卡片，点开看人文与景点（按类型筛选）、必吃、住哪、小贴士；♥ 收藏到首页「我想去的城市」 |
 | 人文礼仪 | 要这样 / 别这样 / 知道一下 |
 | 语言 | 学习思路、和中文相通的词、字母表（点字母听发音）、分场景旅行用语：闪卡模式翻面自测、速查模式直接看；浏览器朗读；标记学会、看进度 |
@@ -27,6 +28,10 @@
 | 出发清单 | 可勾选，进度存在本机 |
 
 收藏、学习进度、清单勾选都只存在本机浏览器（localStorage），不上传。
+
+## 图片
+
+只用 Wikimedia Commons 上许可为 公有领域 / CC0 / CC BY / CC BY-SA 的照片（不收 NC、ND），下载后转成 webp（宽 1280、单张 ≤ 260 KB）放在 `assets/img/<国家>/`，在数据的 `images` 里记作者、许可和原图链接。页面上每张图右下角有署名，国家页最后有完整的「图片来源」列表。`tools_validate.js` 会检查文件存在、许可在白名单、引用的 key 都有图。
 
 ## 新增一个国家
 
@@ -57,6 +62,16 @@ language: { name, intro, advantages[]: { word, reading, meaning },
             phrases[]: { cat, icon, items[]: { zh, local, roman, note? } } }
 practical[]: { icon, title, points[] }
 checklist[]: 字符串
+
+可选：
+city.img / spot.img / foodGuide[].img / stays[].img    图片 key
+foodGuide[]: { name, local, img?, desc, where, price }
+dining[]: { icon, title, desc }
+festivals[]: { name, local, month, city, desc, tip }
+stays[]: { icon, type, local, img?, desc, price, tip }
+shopping[]: { icon, title, desc, where }
+language.numbers[]: { n, local, roman }，language.priceNote，language.vocab[]: { cat, icon, items[]: { local, roman, zh } }
+images: { key: { src, alt, credit, license, licenseUrl, source } }   key 'cover' 是国家封面
 ```
 
 ## 目录

@@ -1,6 +1,6 @@
 // 网络优先：有网拿最新内容，没网用上次缓存的；联网打开过一次就能离线看
-const CACHE = 'world-travel-v1';
-const CORE = ['./', 'index.html', 'assets/css/style.css?v=1', 'assets/data/index.js?v=1', 'assets/js/app.js?v=1', 'assets/data/japan.js?v=1', 'assets/data/korea.js?v=1', 'assets/icon.svg', 'manifest.json'];
+const CACHE = 'world-travel-v2';
+const CORE = ['./', 'index.html', 'assets/css/style.css?v=2', 'assets/data/index.js?v=2', 'assets/js/app.js?v=2', 'assets/data/japan.js?v=2', 'assets/data/korea.js?v=2', 'assets/icon.svg', 'manifest.json'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));
