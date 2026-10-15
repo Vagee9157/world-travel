@@ -84,13 +84,75 @@
       withCredit === false ? null : credit(im));
   }
 
+  // ---------- 精简展示：图标卡默认只露标题，点开看详情 ----------
+  function fold(cls, summary, body, open) {
+    return el('details', { class: 'fold' + (cls ? ' ' + cls : ''), open: !!open },
+      el('summary', null, summary),
+      el('div', { class: 'fold-body' }, body));
+  }
+  function tile(icon, title, extra, body, cls) {
+    return fold('tile' + (cls ? ' ' + cls : ''), [
+      icon ? el('span', { class: 't-ico', 'aria-hidden': 'true' }, icon) : null,
+      el('span', { class: 't-title' }, title),
+      extra || null,
+      el('span', { class: 'chev', 'aria-hidden': 'true' })
+    ], body);
+  }
+  const bullets = (list) => el('ul', { class: 'dots' }, list.map((t) => el('li', null, t)));
+
+  // 「3 月下旬 – 5 月」「12 – 2 月」→ 覆盖的月份
+  function monthRange(text) {
+    const n = (String(text).match(/\d{1,2}/g) || []).map(Number).filter((x) => x >= 1 && x <= 12);
+    if (!n.length) return [];
+    const a = n[0], b = n[n.length - 1], out = [];
+    for (let m = a, i = 0; i < 12; i++) { out.push(m); if (m === b) break; m = m % 12 + 1; }
+    return out;
+  }
+  // 节庆写的月份：「1–2 月」「4 月 14–15 日 / 10 月 9–10 日」→ [1] / [4, 10]
+  function festMonths(text) {
+    const t = String(text), out = [];
+    const re = /(\d{1,2})\s*(?:[–-]\s*(\d{1,2})\s*)?月/g;
+    let m;
+    while ((m = re.exec(t))) { const v = +m[1]; if (v >= 1 && v <= 12 && !out.includes(v)) out.push(v); }
+    return out.slice(0, 2);
+  }
+  // 「约 3.5–4 小时」「30–40 分钟」「1 小时 25 分」→ 分钟
+  function minutesOf(text) {
+    const t = String(text).replace(/,/g, '');
+    const avg = (m) => (m ? (parseFloat(m[1]) + parseFloat(m[2] || m[1])) / 2 : 0);
+    const h = avg(t.match(/([\d.]+)\s*(?:[–-]\s*([\d.]+)\s*)?(?:个)?小时/));
+    const mi = avg(t.match(/([\d.]+)\s*(?:[–-]\s*([\d.]+)\s*)?分/));
+    const total = h * 60 + mi;
+    return total > 0 ? total : null;
+  }
+  // 「约 600–900 元 / 天」「2500 元起」→ [低, 高, 是否上不封顶]
+  function moneyRange(text) {
+    const n = (String(text).replace(/,/g, '').match(/\d+(?:\.\d+)?/g) || []).map(Number).filter((x) => x >= 10);
+    if (!n.length) return null;
+    const open = /起|以上|\+/.test(text);
+    return [n[0], n.length > 1 ? n[n.length - 1] : n[0], open];
+  }
+  // 单色横向条形图：rows = [{ label, sub, value, lo, hi, open, text, tip }]
+  function barChart(rows, { range = false, unit = '' } = {}) {
+    const max = Math.max(...rows.map((r) => (range ? r.hi * (r.open ? 1.35 : 1) : r.value))) * 1.08;
+    return el('div', { class: 'bars' + (range ? ' range' : ''), role: 'list' }, rows.map((r) => {
+      const left = range ? (r.lo / max) * 100 : 0;
+      const width = range ? Math.max(2, ((r.hi * (r.open ? 1.35 : 1) - r.lo) / max) * 100) : Math.max(2, (r.value / max) * 100);
+      return el('div', { class: 'bar-row', role: 'listitem', title: r.tip || '' },
+        el('div', { class: 'bar-label' }, el('b', null, r.label), r.sub ? el('small', null, r.sub) : null),
+        el('div', { class: 'bar-track' },
+          el('span', { class: 'bar' + (r.open ? ' open' : ''), style: { left: left + '%', width: width + '%' } })),
+        el('div', { class: 'bar-val' }, r.text || (r.value + unit)));
+    }));
+  }
+
   function loadCountry(id) {
     if (TRAVEL.countries[id]) return Promise.resolve(TRAVEL.countries[id]);
     const meta = byId[id];
     if (!meta || meta.status !== 'live' || !meta.file) return Promise.reject(new Error('unknown country'));
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = meta.file + '?v=9';
+      s.src = meta.file + '?v=10';
       s.onload = () => TRAVEL.countries[id] ? resolve(TRAVEL.countries[id]) : reject(new Error('not registered'));
       s.onerror = () => reject(new Error('load failed'));
       document.head.append(s);
@@ -451,10 +513,12 @@
             el('a', { class: 'back', href: SCOPES[scope].path }, SCOPES[scope].back),
             el('h1', null, c.name, el('span', { class: 'en' }, c.nameEn)),
             el('p', { class: 'tagline' }, c.tagline),
-            el('p', { class: 'intro' }, c.intro),
-            c.notice ? el('div', { class: 'notice', role: 'note' },
-              el('div', { class: 'notice-top' }, el('b', null, c.notice.title), c.notice.updated ? el('span', null, '更新于 ' + c.notice.updated) : null),
-              el('ul', { class: 'dots' }, c.notice.points.map((t) => el('li', null, t)))) : null),
+            clampText('intro', c.intro),
+            c.notice ? fold('notice', [
+              el('span', { class: 't-ico', 'aria-hidden': 'true' }, '⚠️'),
+              el('span', { class: 'notice-title' }, el('b', null, c.notice.title), el('small', null, `${c.notice.points.length} 条${c.notice.updated ? ' · 更新于 ' + c.notice.updated : ''}`), el('span', { class: 'notice-first' }, c.notice.points[0])),
+              el('span', { class: 'chev', 'aria-hidden': 'true' })
+            ], bullets(c.notice.points)) : null),
           cover ? photo(c, 'cover', 'hero-photo') : null)),
       subnav,
       el('div', { class: 'wrap' }, panels)
@@ -462,6 +526,13 @@
     let start = store.get(tabKey, 'overview');
     if (!secs.some((x) => x[0] === start)) start = 'overview';
     showTab(start, false);
+  }
+
+  // 长段落只露几行，点「展开」看全文
+  function clampText(cls, text) {
+    const p = el('p', { class: cls + ' clamp' }, text);
+    const btn = el('button', { type: 'button', class: 'linkbtn more-btn', onclick: () => { const on = p.classList.toggle('clamp'); btn.textContent = on ? '展开' : '收起'; } }, '展开');
+    return el('div', { class: 'clamp-wrap' }, p, btn);
   }
 
   function section(id, n, title, desc, ...body) {
@@ -474,32 +545,53 @@
   }
 
   function overview(c) {
+    // 一年 12 个月的推荐度：每个月归到它所在的季节
+    const byMonth = {};
+    c.seasons.forEach((se) => monthRange(se.months).forEach((m) => { if (!byMonth[m]) byMonth[m] = se; }));
+    const nowM = new Date().getMonth() + 1;
+    const detail = el('div', { class: 'season-detail', 'aria-live': 'polite' });
+    const cols = [];
+    const pick = (se, m) => {
+      cols.forEach((col) => col.classList.toggle('sel', byMonth[col.dataset.m] === se));
+      detail.replaceChildren(
+        el('div', { class: 'sd-head' },
+          el('b', null, se.name), el('span', null, se.months),
+          el('span', { class: 'stars', 'aria-label': `推荐度 ${se.rating}/5` }, '★'.repeat(se.rating) + '☆'.repeat(5 - se.rating))),
+        el('p', null, se.desc),
+        el('div', { class: 'tags' }, se.highlights.map((h) => el('span', { class: 'tag' }, h))));
+    };
+    for (let m = 1; m <= 12; m++) {
+      const se = byMonth[m], r = se ? se.rating : 0;
+      const col = el('button', {
+        type: 'button', class: 'm-col' + (m === nowM ? ' now' : ''), 'data-m': m,
+        style: { '--h': (r / 5) * 100 + '%', '--o': (0.25 + r * 0.15).toFixed(2) },
+        title: se ? `${m} 月 · ${se.name} · 推荐 ${r}/5` : `${m} 月`,
+        'aria-label': se ? `${m} 月，${se.name}，推荐度 ${r}` : `${m} 月`,
+        onclick: () => se && pick(se, m)
+      }, el('span', { class: 'm-bar' }), el('span', { class: 'm-num' }, m), m === nowM ? el('span', { class: 'm-now' }, '现在') : null);
+      cols.push(col);
+    }
+    const first = byMonth[nowM] || c.seasons[0];
+    pick(first, nowM);
+
+    const budgets = c.budget.map((b) => ({ b, r: moneyRange(b.perDay) })).filter((x) => x.r);
     return [
-      el('div', { class: 'grid g-facts' }, c.facts.map((f) =>
-        el('div', { class: 'card fact' },
-          el('span', { class: 'ico', 'aria-hidden': 'true' }, f.icon),
-          el('div', null, el('div', { class: 'k' }, f.label), el('div', { class: 'v' }, f.value))))),
-      el('h3', { class: 'sub-h' }, '四季怎么选'),
-      el('div', { class: 'grid g-3' }, c.seasons.map((s) =>
-        el('div', { class: 'card season' },
-          el('div', { class: 'rating', title: `推荐度 ${s.rating}/5`, 'aria-label': `推荐度 ${s.rating}/5` },
-            [1, 2, 3, 4, 5].map((i) => el('i', { class: i <= s.rating ? 'on' : null }))),
-          el('div', { class: 's-name' }, s.name),
-          el('div', { class: 's-months' }, s.months),
-          el('p', null, s.desc),
-          el('div', { class: 'tags' }, s.highlights.map((h) => el('span', { class: 'tag' }, h)))))),
-      el('div', { class: 'grid g-2', style: { 'margin-top': '14px' } },
-        el('div', { class: 'card callout' },
-          el('h3', null, c.visa.title),
-          el('ul', { class: 'dots' }, c.visa.points.map((p) => el('li', null, p)))),
-        el('div', { class: 'card' },
-          el('h3', { style: { 'font-size': '18px', 'margin-bottom': '4px' } }, '每天花多少'),
-          el('p', { class: 'meta-line', style: { 'margin-bottom': '10px' } }, c.budgetNote || '人民币，不含机票'),
-          el('div', { class: 'grid', style: { gap: '12px' } }, c.budget.map((b) =>
-            el('div', { class: 'budget' },
-              el('div', { class: 'lv' }, b.level),
-              el('div', { class: 'pd' }, b.perDay),
-              el('p', null, b.desc))))))
+      el('div', { class: 'facts-tiles' }, c.facts.map((f) =>
+        tile(f.icon, f.label, el('span', { class: 't-val' }, f.value.split(/[；;（(]/)[0]), el('p', null, f.value)))),
+      el('div', { class: 'ov-grid' },
+        el('div', { class: 'card chart-card' },
+          el('h3', { class: 'card-h' }, '🗓 什么时候去'),
+          el('div', { class: 'months', role: 'group', 'aria-label': '每月推荐度，点柱子看那个季节' }, cols),
+          detail),
+        el('div', { class: 'card chart-card' },
+          el('h3', { class: 'card-h' }, '💰 每天花多少'),
+          el('p', { class: 'meta-line' }, c.budgetNote || '人民币，不含机票'),
+          budgets.length === c.budget.length
+            ? barChart(budgets.map(({ b, r }) => ({ label: b.level, lo: r[0], hi: r[1], open: r[2], text: b.perDay.replace(/^约\s*/, ''), tip: b.desc })), { range: true })
+            : bullets(c.budget.map((b) => `${b.level}：${b.perDay}`)),
+          fold('mini', '三档分别怎么花', bullets(c.budget.map((b) => `${b.level}：${b.desc}`))))),
+      fold('callout-fold', [el('span', { class: 't-ico', 'aria-hidden': 'true' }, '🛂'), el('span', { class: 't-title' }, c.visa.title), el('span', { class: 't-val' }, `${c.visa.points.length} 条`), el('span', { class: 'chev', 'aria-hidden': 'true' })],
+        bullets(c.visa.points))
     ];
   }
 
@@ -532,28 +624,29 @@
         class: 'tab', role: 'tab', type: 'button', 'aria-selected': String(x.id === active),
         onclick: () => { active = x.id; draw(); }
       }, el('b', null, x.title), el('span', null, x.length))));
-      const route = [];
-      it.route.forEach((id, i) => {
-        if (i) route.push(el('span', { class: 'arr', 'aria-hidden': 'true' }, '→'));
-        route.push(el('button', { class: 'stop', type: 'button', onclick: () => openCity(c, id) }, cityName(c, id)));
-      });
+      // 路线串点：每座城市一个点，旁边写住几天
+      const days = {};
+      it.plan.forEach((d) => { days[d.city] = (days[d.city] || 0) + 1; });
       panel.replaceChildren(
         el('div', { class: 'itin-head' },
-          el('p', null, it.summary),
-          el('div', { class: 'route-line' }, route),
-          el('div', { class: 'suits' }, '适合：', it.suits)),
+          el('ol', { class: 'stepper' }, it.route.map((id) => el('li', null,
+            el('button', { type: 'button', onclick: () => openCity(c, id) },
+              el('i', { 'aria-hidden': 'true' }), el('b', null, cityName(c, id)), el('small', null, days[id] ? `${days[id]} 天` : ''))))),
+          el('div', { class: 'itin-meta' },
+            el('span', { class: 'pill-s' }, '🗓 ', it.length),
+            el('span', { class: 'pill-s' }, '👥 ', it.suits)),
+          el('p', { class: 'itin-sum' }, it.summary)),
         el('ol', { class: 'timeline' }, it.plan.map((d, i) =>
           el('li', { class: 'day' },
             el('span', { class: 'day-dot', 'aria-hidden': 'true' }, 'D' + (i + 1)),
             el('div', { class: 'card' },
               el('div', { class: 'day-top' },
-                el('span', { class: 'day-city' }, `第 ${i + 1} 天 · ${cityName(c, d.city)}`),
+                el('span', { class: 'day-city' }, cityName(c, d.city)),
                 el('h4', null, d.title)),
-              el('ul', null, d.items.map((t) => el('li', null, t))),
               el('div', { class: 'day-spots' },
-                d.spots && d.spots.length ? el('span', null, '当天景点') : null,
-                (d.spots || []).map((name) => el('button', { type: 'button', class: 'chip', onclick: () => openCity(c, d.city, false, name) }, name)),
-                el('button', { type: 'button', class: 'day-more', onclick: () => openCity(c, d.city) }, `${cityName(c, d.city)}全部景点 →`)))))));
+                (d.spots || []).map((name) => el('button', { type: 'button', class: 'chip', onclick: () => openCity(c, d.city, false, name) }, '📍 ' + name)),
+                el('button', { type: 'button', class: 'day-more', onclick: () => openCity(c, d.city) }, '全部景点 →')),
+              fold('mini', `当天安排 · ${d.items.length} 条`, el('ul', { class: 'steps' }, d.items.map((t) => el('li', null, t)))))))));
     };
     draw();
     return [tabs, panel];
@@ -561,28 +654,24 @@
 
   function flights(c) {
     const f = c.flights;
+    const rows = f.routes.map((r) => ({ r, m: minutesOf(r.duration) }));
+    const charted = rows.filter((x) => x.m).sort((a, b) => a.m - b.m);
+    const china = byId[c.id] && byId[c.id].scope === 'china';
     return [
-      el('div', { class: 'grid g-3' }, f.routes.map((r) =>
-        el('div', { class: 'card flight' },
-          el('div', { class: 'end' }, r.from),
-          el('div', { class: 'mid' }, el('span', { class: 'plane', 'aria-hidden': 'true' }), r.duration),
-          el('div', { class: 'end to' }, r.to),
-          el('div', { class: 'air' }, r.airlines)))),
-      el('h3', { class: 'sub-h' }, '主要机场'),
-      el('div', { class: 'grid g-2' }, f.airports.map((a) =>
-        el('div', { class: 'card airport' },
-          el('span', { class: 'iata' }, a.code),
-          el('div', null, el('h4', null, a.name, el('small', null, a.city)), el('p', null, a.note))))),
-      el('div', { class: 'card tipbox', style: { 'margin-top': '14px' } },
-        el('h3', null, '订票小技巧'),
-        el('ul', { class: 'dots' }, f.tips.map((t) => el('li', null, t)))),
-      el('h3', { class: 'sub-h' }, '当地交通'),
-      el('div', { class: 'grid g-2' }, c.transport.map((t) =>
-        el('div', { class: 'card transport' },
-          el('div', { class: 't-ico', 'aria-hidden': 'true' }, t.icon),
-          el('h4', null, t.title),
-          el('p', null, t.desc),
-          t.tip ? el('div', { class: 'tip' }, t.tip) : null)))
+      el('div', { class: 'card chart-card' },
+        el('h3', { class: 'card-h' }, china ? '🚄 从哪儿来要多久' : '✈️ 直飞要多久'),
+        charted.length ? barChart(charted.map(({ r, m }) => ({
+          label: `${r.from} → ${r.to}`, sub: r.airlines, value: m,
+          text: r.duration.replace(/^约\s*/, ''), tip: r.airlines
+        }))) : null,
+        rows.filter((x) => !x.m).map(({ r }) => el('p', { class: 'meta-line' }, `${r.from} → ${r.to}：${r.duration}（${r.airlines}）`))),
+      el('h3', { class: 'sub-h' }, china ? '🚉 车站和机场' : '🛬 主要机场'),
+      el('div', { class: 'tiles' }, f.airports.map((a) =>
+        tile(null, a.name, [el('span', { class: 'iata' }, a.code), el('span', { class: 't-val' }, a.city)], el('p', null, a.note), 'airport-tile'))),
+      fold('callout-fold', [el('span', { class: 't-ico', 'aria-hidden': 'true' }, '💡'), el('span', { class: 't-title' }, china ? '订票小技巧' : '订票小技巧'), el('span', { class: 't-val' }, `${f.tips.length} 条`), el('span', { class: 'chev', 'aria-hidden': 'true' })], bullets(f.tips)),
+      el('h3', { class: 'sub-h' }, '🚇 当地交通'),
+      el('div', { class: 'tiles' }, c.transport.map((t) =>
+        tile(t.icon, t.title, null, [el('p', null, t.desc), t.tip ? el('p', { class: 'stip' }, t.tip) : null])))
     ];
   }
 
@@ -609,10 +698,10 @@
       cityHead(c, city, 'h3'),
       el('div', { class: 'city-body' },
         el('div', { class: 'tags' }, city.vibe.map((v) => el('span', { class: 'tag' }, v))),
-        el('p', null, city.intro),
         el('div', { class: 'city-foot' },
-          el('span', null, '建议 ', el('b', null, city.days)),
-          el('span', { class: 'more' }, `${city.spots.length} 个景点 →`))));
+          el('span', null, '🗓 ', el('b', null, city.days)),
+          el('span', null, '📍 ', el('b', null, city.spots.length), ' 个景点'),
+          el('span', { class: 'more' }, '→'))));
       return card;
     }));
   }
@@ -625,54 +714,65 @@
           el('div', { class: 'dish-text' },
             el('div', { class: 'dish-top' },
               el('h4', null, f.name),
-              el('span', { class: 'lc', lang: c.lang.code }, f.local)),
-            el('p', null, f.desc),
-            f.where ? el('p', { class: 'meta-line' }, el('b', null, '去哪吃 '), f.where) : null,
-            f.price ? el('p', { class: 'meta-line' }, el('b', null, '人均 '), f.price) : null)))),
+              el('span', { class: 'lc', lang: c.lang.code }, f.local),
+              f.price ? el('span', { class: 'price' }, f.price.replace(/^大约\s*|^约\s*/, '')) : null),
+            fold('mini', '吃法和去哪吃', [el('p', null, f.desc), f.where ? el('p', { class: 'meta-line' }, '📍 ', f.where) : null]))))),
       c.dining ? [
-        el('h3', { class: 'sub-h' }, '在日本吃饭要知道的'),
-        el('div', { class: 'grid g-3' }, c.dining.map((d) =>
-          el('div', { class: 'card tipcard' },
-            el('div', { class: 'e-ico', 'aria-hidden': 'true' }, d.icon),
-            el('h4', null, d.title),
-            el('p', null, d.desc))))
+        el('h3', { class: 'sub-h' }, `🍽 在${c.name}吃饭要知道的`),
+        el('div', { class: 'tiles' }, c.dining.map((d) => tile(d.icon, d.title, null, el('p', null, d.desc))))
       ] : null
     ];
   }
 
+  // 节庆月历：12 个月一格一格，点节日看详情
   function festivals(c) {
-    return el('div', { class: 'fests' }, c.festivals.map((f) =>
-      el('div', { class: 'card fest' },
-        el('div', { class: 'fest-month' }, f.month),
-        el('h4', null, f.name, el('small', { lang: c.lang.code }, f.local)),
-        el('div', { class: 'fest-city' }, f.city),
+    const detail = el('div', { class: 'fest-detail card', 'aria-live': 'polite' });
+    const chips = [];
+    const show = (f, btn) => {
+      chips.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+      detail.replaceChildren(
+        el('div', { class: 'sd-head' }, el('b', null, f.name), el('span', { lang: c.lang.code }, f.local), el('span', { class: 'pill-s' }, '🗓 ', f.month), el('span', { class: 'pill-s' }, '📍 ', f.city)),
         el('p', null, f.desc),
-        f.tip ? el('p', { class: 'stip' }, f.tip) : null)));
+        f.tip ? el('p', { class: 'stip' }, f.tip) : null);
+    };
+    const cells = [];
+    for (let m = 1; m <= 12; m++) cells.push({ m, items: [] });
+    const other = [];
+    c.festivals.forEach((f) => {
+      const ms = festMonths(f.month);
+      if (!ms.length) other.push(f); else ms.forEach((m) => cells[m - 1].items.push(f));
+    });
+    const nowM = new Date().getMonth() + 1;
+    const mk = (f) => { const b = el('button', { type: 'button', class: 'fest-chip', 'aria-pressed': 'false', onclick: () => show(f, b) }, f.name); chips.push(b); return b; };
+    const grid = el('div', { class: 'cal' }, cells.map((cell) => {
+      cell.btns = cell.items.map(mk);
+      return el('div', { class: 'cal-cell' + (cell.items.length ? ' has' : '') + (cell.m === nowM ? ' now' : '') },
+        el('span', { class: 'cal-m' }, cell.m + ' 月'), cell.btns);
+    }),
+      other.length ? el('div', { class: 'cal-cell has wide' }, el('span', { class: 'cal-m' }, '全年 / 其他'), other.map(mk)) : null);
+    const upcoming = cells.slice(nowM - 1).concat(cells.slice(0, nowM - 1)).find((x) => x.items.length);
+    if (upcoming) show(upcoming.items[0], upcoming.btns[0]);
+    return [grid, detail];
   }
 
   function staysShopping(c) {
     return [
       c.stays ? [
-        el('h3', { class: 'sub-h first' }, '住哪种'),
-        el('div', { class: 'grid g-3' }, c.stays.map((s) =>
+        el('h3', { class: 'sub-h first' }, '🛏 住哪种'),
+        el('div', { class: 'foods' }, c.stays.map((s) =>
           el('div', { class: 'card stay has-img' },
-            photo(c, s.img, 'stay-photo', true, true) || el('div', { class: 'stay-photo dish-type', 'aria-hidden': 'true' }, s.local),
+            photo(c, s.img, 'stay-photo', true, true) || el('div', { class: 'stay-photo dish-type', 'aria-hidden': 'true' }, s.icon),
             el('div', { class: 'stay-text' },
-              el('div', { class: 'stay-top' },
-                el('span', { class: 'e-ico', 'aria-hidden': 'true' }, s.icon),
-                el('h4', null, s.type, el('small', { lang: c.lang.code }, s.local))),
-              el('p', null, s.desc),
-              s.price ? el('p', { class: 'meta-line' }, el('b', null, '每晚 '), s.price) : null,
-              s.tip ? el('p', { class: 'stip' }, s.tip) : null))))
+              el('div', { class: 'dish-top' },
+                el('h4', null, s.type),
+                el('span', { class: 'lc', lang: c.lang.code }, s.local),
+                s.price ? el('span', { class: 'price' }, s.price.replace(/^大约\s*|^约\s*/, '')) : null),
+              fold('mini', '适合谁、注意什么', [el('p', null, s.desc), s.tip ? el('p', { class: 'stip' }, s.tip) : null])))))
       ] : null,
       c.shopping ? [
-        el('h3', { class: 'sub-h' }, '买什么'),
-        el('div', { class: 'grid g-3' }, c.shopping.map((s) =>
-          el('div', { class: 'card tipcard' },
-            el('div', { class: 'e-ico', 'aria-hidden': 'true' }, s.icon),
-            el('h4', null, s.title),
-            el('p', null, s.desc),
-            s.where ? el('p', { class: 'meta-line' }, el('b', null, '去哪买 '), s.where) : null)))
+        el('h3', { class: 'sub-h' }, '🛍 买什么'),
+        el('div', { class: 'tiles' }, c.shopping.map((s) =>
+          tile(s.icon, s.title, null, [el('p', null, s.desc), s.where ? el('p', { class: 'meta-line' }, '📍 ', s.where) : null])))
       ] : null
     ];
   }
@@ -706,13 +806,12 @@
   }
 
   function culture(c) {
-    const label = { do: '要这样', dont: '别这样', info: '知道一下' };
-    return el('div', { class: 'grid g-3' }, c.culture.map((e) =>
-      el('div', { class: 'card etq ' + e.type },
-        el('span', { class: 'badge' }, label[e.type] || ''),
-        el('div', { class: 'e-ico', 'aria-hidden': 'true' }, e.icon),
-        el('h4', null, e.title),
-        el('p', null, e.desc))));
+    const label = { do: '✓ 要这样', dont: '✕ 别这样', info: 'ℹ 知道一下' };
+    const groups = ['do', 'dont', 'info'].map((t) => [t, c.culture.filter((e) => e.type === t)]).filter(([, l]) => l.length);
+    return groups.map(([t, list]) => [
+      el('h3', { class: 'sub-h etq-h ' + t }, label[t], el('small', null, list.length)),
+      el('div', { class: 'tiles' }, list.map((e) => tile(e.icon, e.title, null, el('p', null, e.desc), 'etq ' + e.type)))
+    ]);
   }
 
   function language(c) {
@@ -846,11 +945,8 @@
   }
 
   function practical(c) {
-    return el('div', { class: 'grid g-2' }, c.practical.map((p) =>
-      el('div', { class: 'card prac' },
-        el('div', { class: 'p-ico', 'aria-hidden': 'true' }, p.icon),
-        el('h4', null, p.title),
-        el('ul', { class: 'dots' }, p.points.map((t) => el('li', null, t))))));
+    return el('div', { class: 'tiles' }, c.practical.map((p, i) =>
+      tile(p.icon, p.title, el('span', { class: 't-val' }, `${p.points.length} 条`), bullets(p.points), i === 0 && /问题|紧急|求助/.test(p.title) ? 'urgent' : '')));
   }
 
   function checklist(c) {
@@ -974,17 +1070,16 @@
 
     const types = ['全部', ...new Set(city.spots.map((s) => s.type))];
     let type = '全部';
-    const spotList = el('div', { class: 'grid' });
+    const spotList = el('div', { class: 'spot-grid' });
     const drawSpots = () => spotList.replaceChildren(...city.spots.filter((s) => type === '全部' || s.type === type).map((s) =>
-      el('div', { class: 'card spot' + (imgOf(c, s.img) ? ' has-img' : ''), 'data-spot': s.name },
+      el('div', { class: 'card spot' + (imgOf(c, s.img) ? ' has-img' : ' no-img'), 'data-spot': s.name },
         photo(c, s.img, 'spot-photo', true, true),
         el('div', { class: 'spot-text' },
           el('div', { class: 'spot-top' },
             el('h5', null, s.name),
-            el('span', { class: 'lc', lang: c.lang.code }, s.local),
             el('span', { class: 'type t-' + s.type }, s.type)),
-          el('p', null, s.desc),
-          s.tip ? el('p', { class: 'stip' }, s.tip) : null))));
+          s.local && s.local !== s.name ? el('span', { class: 'lc', lang: c.lang.code }, s.local) : null,
+          fold('mini', '介绍和贴士', [el('p', null, s.desc), s.tip ? el('p', { class: 'stip' }, s.tip) : null])))));
     const filter = el('div', { class: 'chips spot-filter' }, types.map((t) => el('button', {
       class: 'chip', type: 'button', 'aria-pressed': String(t === type),
       onclick: (e) => {
@@ -1004,23 +1099,20 @@
       el('span', { class: 'grab', 'aria-hidden': 'true' }),
       head,
       el('div', { class: 'm-body' },
-        el('p', null, city.intro),
+        clampText('m-intro', city.intro),
         el('div', { class: 'm-meta' },
-          el('div', null, el('b', null, '建议停留'), city.days),
-          el('div', null, el('b', null, '最佳时间'), city.best),
-          el('div', null, el('b', null, '怎么去'), city.access)),
-        el('h4', { class: 'sub-h' }, `人文与景点 · ${city.spots.length}`),
+          el('div', null, el('b', null, '🗓 建议停留'), city.days),
+          el('div', null, el('b', null, '🌤 最佳时间'), city.best),
+          fold('mini m-access', '🚆 怎么去', el('p', null, city.access))),
+        el('h4', { class: 'sub-h' }, `📍 人文与景点 · ${city.spots.length}`),
         filter,
         spotList,
-        el('h4', { class: 'sub-h' }, '必吃'),
-        el('div', { class: 'food' }, city.food.map((f) =>
-          el('div', { class: 'card' }, el('b', null, f.name), el('small', { lang: c.lang.code }, f.local), el('p', null, f.desc)))),
-        el('h4', { class: 'sub-h' }, '住在哪'),
-        el('p', null, city.stay),
-        city.tips && city.tips.length ? [
-          el('h4', { class: 'sub-h' }, '小贴士'),
-          el('ul', { class: 'dots' }, city.tips.map((t) => el('li', null, t)))
-        ] : null)));
+        el('h4', { class: 'sub-h' }, `🍜 必吃 · ${city.food.length}`),
+        el('div', { class: 'tiles' }, city.food.map((f) =>
+          tile(null, f.name, el('span', { class: 't-val', lang: c.lang.code }, f.local), el('p', null, f.desc)))),
+        el('div', { class: 'tiles', style: { 'margin-top': '18px' } },
+          tile('🛏', '住在哪', null, el('p', null, city.stay)),
+          city.tips && city.tips.length ? tile('💡', '小贴士', el('span', { class: 't-val' }, `${city.tips.length} 条`), bullets(city.tips)) : null))));
     modal.hidden = false;
     modalCard.style.transform = '';
     document.body.style.overflow = 'hidden';
@@ -1034,6 +1126,7 @@
       requestAnimationFrame(() => {
         scroller.scrollTop = target.offsetTop - 70;
         target.classList.add('flash');
+        const d = target.querySelector('details'); if (d) d.open = true;
         setTimeout(() => target.classList.remove('flash'), 1600);
       });
     }
