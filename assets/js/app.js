@@ -68,7 +68,7 @@
     if (!meta || meta.status !== 'live' || !meta.file) return Promise.reject(new Error('unknown country'));
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = meta.file + '?v=5';
+      s.src = meta.file + '?v=6';
       s.onload = () => TRAVEL.countries[id] ? resolve(TRAVEL.countries[id]) : reject(new Error('not registered'));
       s.onerror = () => reject(new Error('load failed'));
       document.head.append(s);
@@ -163,7 +163,7 @@
       drawGrid();
 
       // ---- 地球 + 选中目的地卡片
-      let origin = ORIGINS.find((o) => o.name === store.get('origin', '上海')) || ORIGINS[1];
+      let origin = ORIGINS.find((o) => o.name === store.get('origin', '深圳')) || ORIGINS[3];
       let selId = store.get('globeSel', 'japan');
       if (!byId[selId]) selId = live[0] ? live[0].id : INDEX[0].id;
       const cardHost = el('div', { class: 'dest-host', 'aria-live': 'polite' });
