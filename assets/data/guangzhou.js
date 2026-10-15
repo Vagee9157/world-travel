@@ -161,21 +161,24 @@ TRAVEL.register({
           local: '鎮海樓',
           type: '人文',
           desc: '越秀山上一座五层的红墙楼，明代初年就有了，被叫作「岭南第一楼」。现在楼里是广州博物馆的展区，讲广州从秦汉到近代的城市史。越秀公园很大，五羊石像也在这里。',
-          tip: '爬上去出点汗，早上去凉快；广州博物馆一般周一闭馆，开放时间以官方为准。'
+          tip: '爬上去出点汗，早上去凉快；广州博物馆一般周一闭馆，开放时间以官方为准。',
+          img: 'yuexiu/zhenhai'
         },
         {
           name: '石室圣心大教堂',
           local: '石室聖心大教堂',
           type: '人文',
           desc: '整座用花岗岩砌起来的哥特式教堂，清末建成，两座尖塔在一德路的干货批发街里显得特别突兀，本地人叫它「石室」。',
-          tip: '这是正在使用的教堂，内部开放时间以教堂通知为准，弥撒时别打扰；穿着别太随意。从 6 号线一德路站出来就到。'
+          tip: '这是正在使用的教堂，内部开放时间以教堂通知为准，弥撒时别打扰；穿着别太随意。从 6 号线一德路站出来就到。',
+          img: 'yuexiu/sacredheart'
         },
         {
           name: '中山纪念堂',
           local: '中山紀念堂',
           type: '人文',
           desc: '为纪念孙中山建的八角形大礼堂，1931 年落成，里面几千个座位却看不到一根柱子。门口那棵老木棉树春天开花很好看。',
-          tip: '和越秀公园就隔一条马路，可以排在同一个上午；门票和开放时间以官方为准。'
+          tip: '和越秀公园就隔一条马路，可以排在同一个上午；门票和开放时间以官方为准。',
+          img: 'yuexiu/sunyatsen'
         },
         {
           name: '北京路步行街',
@@ -214,7 +217,8 @@ TRAVEL.register({
         { name: '萝卜牛杂', local: '蘿蔔牛雜', desc: '街边小摊用大锅慢炖，牛杂配软萝卜，边走边吃。' }
       ],
       stay: '想住老城就住北京路、公园前一带，走路去大部分景点，2 号线去广州南站也直达。',
-      tips: ['越秀公园、中山纪念堂、南越王博物院（王墓）挨得很近，排一个上午正好。', '北京路一带的老字号茶楼周末 8 点前去，晚了要拿号等。', '博物馆、纪念馆周一闭馆的多，越秀这天最好别排在周一。']
+      tips: ['越秀公园、中山纪念堂、南越王博物院（王墓）挨得很近，排一个上午正好。', '北京路一带的老字号茶楼周末 8 点前去，晚了要拿号等。', '博物馆、纪念馆周一闭馆的多，越秀这天最好别排在周一。'],
+      img: 'city/yuexiu'
     },
     {
       id: 'liwan',
@@ -234,21 +238,24 @@ TRAVEL.register({
           local: '沙面',
           type: '人文',
           desc: '珠江边一个小岛，清末划给英法做租界，留下一百多栋欧式老建筑，现在是领事馆旧址、教堂、咖啡店和婚纱照取景地。路边大榕树很多，走起来很舒服。',
-          tip: '早上或傍晚去人少、光线好；地铁黄沙站出来过一座桥就到。'
+          tip: '早上或傍晚去人少、光线好；地铁黄沙站出来过一座桥就到。',
+          img: 'liwan/shamian'
         },
         {
           name: '陈家祠',
           local: '陳家祠',
           type: '人文',
           desc: '清末广东各地陈姓合资建的宗祠，屋脊、墙面上的灰塑、砖雕、木雕、陶塑密得看不过来，是岭南建筑装饰的集大成。现在也是广东民间工艺博物馆。',
-          tip: '地铁陈家祠站出来就是；看屋脊上的陶塑人物最好带个长焦或者站远点。开放时间和门票以官方为准。'
+          tip: '地铁陈家祠站出来就是；看屋脊上的陶塑人物最好带个长焦或者站远点。开放时间和门票以官方为准。',
+          img: 'liwan/chenclan'
         },
         {
           name: '永庆坊与恩宁路骑楼',
           local: '永慶坊',
           type: '人文',
           desc: '恩宁路是广州保存得比较完整的一条长骑楼街，永庆坊是旁边改造过的老街区，有咖啡店、非遗小店和李小龙祖居，粤剧艺术博物馆就在边上。',
-          tip: '周末下午很挤，早上去拍骑楼更干净；逛完可以沿着河涌走去荔枝湾。'
+          tip: '周末下午很挤，早上去拍骑楼更干净；逛完可以沿着河涌走去荔枝湾。',
+          img: 'liwan/yongqing'
         },
         {
           name: '上下九步行街',
@@ -281,7 +288,8 @@ TRAVEL.register({
         { name: '西关牛杂 · 炸物', local: '西關小食', desc: '上下九、永庆坊一带的小摊，牛杂、萝卜糕、鸡蛋仔，边走边吃。' }
       ],
       stay: '住上下九、陈家祠一带最有老广州味道，生活方便；想安静点可以住沙面附近。',
-      tips: ['一条比较顺的路线：陈家祠 → 上下九 → 永庆坊 → 荔枝湾 → 坐地铁去沙面看日落。', '骑楼底下就是人行道，雨天也不太用撑伞。', '老城区网红店排队久，街坊小店不一定差，看本地人多的就进去。']
+      tips: ['一条比较顺的路线：陈家祠 → 上下九 → 永庆坊 → 荔枝湾 → 坐地铁去沙面看日落。', '骑楼底下就是人行道，雨天也不太用撑伞。', '老城区网红店排队久，街坊小店不一定差，看本地人多的就进去。'],
+      img: 'city/liwan'
     },
     {
       id: 'tianhe',
@@ -301,21 +309,24 @@ TRAVEL.register({
           local: '花城廣場',
           type: '夜景',
           desc: '珠江新城中轴线上的大广场，两侧是广州最高的一排写字楼，南边对着海心沙和广州塔，晚上灯一亮就是广州最经典的城市夜景。',
-          tip: '天黑前半小时到，能看着楼和塔一起亮灯；周末晚上有时有灯光秀，以当天安排为准。'
+          tip: '天黑前半小时到，能看着楼和塔一起亮灯；周末晚上有时有灯光秀，以当天安排为准。',
+          img: 'tianhe/huacheng'
         },
         {
           name: '广东省博物馆',
           local: '廣東省博物館',
           type: '人文',
           desc: '外形像一个镂空的宝盒，馆里有广东历史文化、潮州木雕、端砚、陶瓷和自然资源等展厅，免费、展品多，雨天来最合适。',
-          tip: '周一闭馆，要在「广东省博物馆预约」小程序实名预约，一般每晚 22 点放号、可约未来 7 天；特展另收费，以官方为准。'
+          tip: '周一闭馆，要在「广东省博物馆预约」小程序实名预约，一般每晚 22 点放号、可约未来 7 天；特展另收费，以官方为准。',
+          img: 'tianhe/museum'
         },
         {
           name: '广州大剧院',
           local: '廣州大劇院',
           type: '人文',
           desc: '扎哈·哈迪德设计，外形像珠江边两块被水冲圆的石头，晚上打灯很好看。常有歌剧、音乐剧、交响乐演出。',
-          tip: '外面随时可以看；想进去最好买一场演出，票务以剧院官方渠道为准。'
+          tip: '外面随时可以看；想进去最好买一场演出，票务以剧院官方渠道为准。',
+          img: 'tianhe/opera'
         },
         { name: '广州图书馆', local: '廣州圖書館', type: '人文', desc: '就在花城广场东边，外形像一摞叠起来的书，里面空间开阔，免费进入，逛累了可以进去坐坐。', tip: '和省博、大剧院走路几分钟，可以排成一串。' },
         { name: '天河路商圈', local: '天河路', type: '购物', desc: '天河城、正佳广场、太古汇、天环广场一路连过去，地下通道基本能串起来，下雨也不怕。旁边是天河体育中心。', tip: '体育西路站是换乘大站，早晚高峰非常挤，尽量错开。' },
@@ -333,7 +344,8 @@ TRAVEL.register({
         { name: '糖水', local: '糖水', desc: '杨枝甘露、芝麻糊、龟苓膏，商场和街边都有，晚上看完夜景来一碗。' }
       ],
       stay: '想看江景、出差方便住珠江新城；预算有限住天河路、体育西路附近，交通最方便。广交会期间这片最贵。',
-      tips: ['花城广场、省博、大剧院、图书馆可以串成一个下午，傍晚留在广场看亮灯。', '对岸的广州塔属于海珠，过江坐 APM 或 3 号线一站就到。', '中轴线地下是商场和地铁，热天下雨可以从地下走。']
+      tips: ['花城广场、省博、大剧院、图书馆可以串成一个下午，傍晚留在广场看亮灯。', '对岸的广州塔属于海珠，过江坐 APM 或 3 号线一站就到。', '中轴线地下是商场和地铁，热天下雨可以从地下走。'],
+      img: 'city/tianhe'
     },
     {
       id: 'haizhu',
@@ -353,21 +365,24 @@ TRAVEL.register({
           local: '廣州塔',
           type: '夜景',
           desc: '本地人叫它「小蛮腰」，塔高 600 米。上塔可以看全城，顶上有摩天轮和户外观景平台，晚上的灯光是珠江夜景的主角。',
-          tip: '门票分不同楼层和项目，在官方渠道买，价格以官方为准；想拍塔本身反而要去对岸花城广场或海心沙。'
+          tip: '门票分不同楼层和项目，在官方渠道买，价格以官方为准；想拍塔本身反而要去对岸花城广场或海心沙。',
+          img: 'haizhu/cantontower'
         },
         {
           name: '海珠国家湿地公园',
           local: '海珠濕地',
           type: '自然',
           desc: '由一大片老果园改造来的城市湿地，水道纵横，能看到很多鸟，春夏有花、秋冬有候鸟。在市中心旁边能这么安静，很难得。',
-          tip: '园子大，最好穿好走的鞋，夏天防蚊；离地铁站要走一段或打车，用地图导航到具体入口。'
+          tip: '园子大，最好穿好走的鞋，夏天防蚊；离地铁站要走一段或打车，用地图导航到具体入口。',
+          img: 'haizhu/wetland'
         },
         {
           name: '小洲村',
           local: '小洲村',
           type: '人文',
           desc: '保存得比较完整的岭南水乡，河涌、石桥、蚝壳墙老屋，以前很多艺术生在这里租房，现在有画室、小店和茶馆。',
-          tip: '没有直达地铁，可以坐 4 号线到官洲站一带再打车或坐公交；工作日去更安静。'
+          tip: '没有直达地铁，可以坐 4 号线到官洲站一带再打车或坐公交；工作日去更安静。',
+          img: 'haizhu/xiaozhou'
         },
         {
           name: '珠江夜游',
@@ -386,7 +401,8 @@ TRAVEL.register({
         { name: '江南西小吃', local: '江南西', desc: '江南西一带的小吃街和老街坊店多，肠粉、糖水、烧腊都有，比天河便宜。' }
       ],
       stay: '想走路去广州塔住客村、赤岗一带；住琶洲要避开广交会。',
-      tips: ['广州塔和珠江夜游可以排在同一个晚上：先上塔看日落，再下来坐船。', '湿地和小洲村挨得近，可以排一个下午一起逛。', '琶洲、客村这一带在广交会期间酒店和打车都很紧张。']
+      tips: ['广州塔和珠江夜游可以排在同一个晚上：先上塔看日落，再下来坐船。', '湿地和小洲村挨得近，可以排一个下午一起逛。', '琶洲、客村这一带在广交会期间酒店和打车都很紧张。'],
+      img: 'city/haizhu'
     },
     {
       id: 'panyu',
@@ -406,10 +422,25 @@ TRAVEL.register({
           local: '寶墨園',
           type: '人文',
           desc: '在沙湾镇紫坭村，是一座重建的岭南园林，亭台、石桥、锦鲤池之外，最有名的是满墙的大型砖雕和灰塑，工艺很细。',
-          tip: '和沙湾古镇离得近，可以排在同一天；从市桥站转公交或打车，门票以官方为准。'
+          tip: '和沙湾古镇离得近，可以排在同一天；从市桥站转公交或打车，门票以官方为准。',
+          img: 'panyu/baomo'
         },
-        { name: '余荫山房', local: '餘蔭山房', type: '人文', desc: '广东四大名园之一，清代同治年间建的私家园林，面积不大但布局精巧，「缩龙成寸」，几步一景。', tip: '地铁 7 号线南村万博站一带打车过去比较近；园子小，一个小时够了。' },
-        { name: '沙湾古镇', local: '沙灣古鎮', type: '人文', desc: '广州唯一的国家历史文化名镇，留耕堂、青砖古巷、蚝壳墙都还在，也是广东音乐和飘色的故乡。', tip: '一定尝一碗沙湾姜埋奶；古镇白天逛就好，晚上很多店早关门。' },
+        {
+          name: '余荫山房',
+          local: '餘蔭山房',
+          type: '人文',
+          desc: '广东四大名园之一，清代同治年间建的私家园林，面积不大但布局精巧，「缩龙成寸」，几步一景。',
+          tip: '地铁 7 号线南村万博站一带打车过去比较近；园子小，一个小时够了。',
+          img: 'panyu/yuyin'
+        },
+        {
+          name: '沙湾古镇',
+          local: '沙灣古鎮',
+          type: '人文',
+          desc: '广州唯一的国家历史文化名镇，留耕堂、青砖古巷、蚝壳墙都还在，也是广东音乐和飘色的故乡。',
+          tip: '一定尝一碗沙湾姜埋奶；古镇白天逛就好，晚上很多店早关门。',
+          img: 'panyu/shawan'
+        },
         {
           name: '长隆旅游度假区',
           local: '長隆',
@@ -427,7 +458,8 @@ TRAVEL.register({
         { name: '南沙海鲜', local: '南沙海鮮', desc: '靠近出海口，生蚝、虾蟹新鲜，在海鲜市场买了找附近饭店加工。' }
       ],
       stay: '玩长隆住长隆酒店或汉溪长隆站附近最省事；只是逛园林古镇住市区，当天往返就行。',
-      tips: ['宝墨园 + 沙湾古镇是一组，余荫山房另一组，都靠打车接驳，地铁到不了门口。', '去长隆住在附近能早点入园，晚上看完大马戏也不用赶地铁。', '南沙离市中心很远，没有车的话一天只排一两个点。']
+      tips: ['宝墨园 + 沙湾古镇是一组，余荫山房另一组，都靠打车接驳，地铁到不了门口。', '去长隆住在附近能早点入园，晚上看完大马戏也不用赶地铁。', '南沙离市中心很远，没有车的话一天只排一两个点。'],
+      img: 'city/panyu'
     },
     {
       id: 'outskirts',
@@ -447,14 +479,16 @@ TRAVEL.register({
           local: '白雲山',
           type: '自然',
           desc: '「羊城第一秀」，主峰摩星岭三百多米，路都修得很好，走路慢慢上去两三个小时；也可以坐索道。山顶能俯瞰整个广州，天晴时傍晚最好看。',
-          tip: '进山门票很便宜，索道、山顶小景点另收费，以景区公告为准；本地人周末早上爬山的多，工作日更清净。'
+          tip: '进山门票很便宜，索道、山顶小景点另收费，以景区公告为准；本地人周末早上爬山的多，工作日更清净。',
+          img: 'outskirts/baiyunshan'
         },
         {
           name: '黄埔军校旧址',
           local: '黃埔軍校舊址',
           type: '人文',
           desc: '1924 年孙中山创办的陆军军官学校旧址，在长洲岛上，校门、校本部、孙中山故居、俱乐部都按原样复原，附近还有东征阵亡烈士墓。',
-          tip: '周一闭馆，免费但要提前实名预约。地铁 7 号线长洲站下车后走路或坐岛内接驳巴士；也可以从新洲码头坐渡轮上岛。'
+          tip: '周一闭馆，免费但要提前实名预约。地铁 7 号线长洲站下车后走路或坐岛内接驳巴士；也可以从新洲码头坐渡轮上岛。',
+          img: 'outskirts/whampoa'
         },
         {
           name: '南海神庙',
@@ -474,7 +508,8 @@ TRAVEL.register({
         { name: '农家菜', local: '農家菜', desc: '从化、增城郊外的农家乐，走地鸡、河鱼、豆腐，适合爬完山吃一顿。' }
       ],
       stay: '白云山、黄埔当天往返市区就行；从化可以住一晚温泉酒店。',
-      tips: ['白云山一般安排半天，早上爬山、下山去吃早茶。', '黄埔军校和南海神庙都在黄埔，但一个在岛上、一个在东边，最好各排半天。', '从化、增城地铁只到城区，进山基本靠自驾或打车。']
+      tips: ['白云山一般安排半天，早上爬山、下山去吃早茶。', '黄埔军校和南海神庙都在黄埔，但一个在岛上、一个在东边，最好各排半天。', '从化、增城地铁只到城区，进山基本靠自驾或打车。'],
+      img: 'city/outskirts'
     }
   ],
   itineraries: [
@@ -573,6 +608,7 @@ TRAVEL.register({
     {
       name: '早茶点心',
       local: '飲茶 / 點心',
+      img: 'food/dimsum',
       desc: '广州人的「一盅两件」：一壶茶配几样点心。必点虾饺（澄面皮透明、里面整只虾）、干蒸烧卖、叉烧包、凤爪、排骨、马拉糕。周末早上一家老小坐一上午很正常。',
       where: '老字号陶陶居、莲香楼（荔湾第十甫路一带）、广州酒家（文昌南路总店）、泮溪酒家（荔湾湖旁）；连锁点都德分店多；街坊茶楼更便宜、更有烟火气。',
       price: '老字号人均大约 80–150 元；街坊茶楼人均大约 40–80 元'
@@ -580,6 +616,7 @@ TRAVEL.register({
     {
       name: '布拉肠粉',
       local: '布拉腸粉',
+      img: 'food/cheungfun',
       desc: '米浆铺在布上蒸出来再刮下，皮薄滑、有米香，淋一勺豉油。馅料有鲜虾、牛肉、叉烧、鸡蛋，早餐最常见的一样。',
       where: '银记肠粉（多家分店）；荔湾、越秀老城区的早餐店基本都有。',
       price: '一碟大约 8–20 元'
@@ -594,6 +631,7 @@ TRAVEL.register({
     {
       name: '烧鹅 / 烧腊',
       local: '燒鵝 / 燒臘',
+      img: 'food/roastgoose',
       desc: '烧鹅皮脆肉嫩，蘸酸梅酱；叉烧要选肥瘦相间的「半肥瘦」；还有烧肉（脆皮烧肉）、白切鸡、豉油鸡。最省事的吃法是一份双拼烧腊饭。',
       where: '烧腊店满街都是，门口挂着烧鹅叉烧的就是；粤菜酒楼也能点整只或半只。',
       price: '烧腊饭大约 20–40 元；斩料按斤或按份卖，以店里价牌为准'
@@ -601,6 +639,7 @@ TRAVEL.register({
     {
       name: '煲仔饭',
       local: '煲仔飯',
+      img: 'food/claypot',
       desc: '砂锅现煲，上面铺腊味、滑鸡、排骨或窝蛋牛肉，淋豉油拌开吃，锅底一层焦香饭焦是精华。现做要等 20 分钟左右。',
       where: '荔湾龙津东路的超记煲仔饭（米其林必比登推介）；老城区小店多数秋冬才做得最旺。',
       price: '大约 25–50 元一煲'
@@ -608,6 +647,7 @@ TRAVEL.register({
     {
       name: '云吞面',
       local: '雲吞麵',
+      img: 'food/wonton',
       desc: '竹升面（用竹竿压出来的蛋面）爽口有弹性，配鲜虾云吞，汤底用大地鱼和虾籽熬。广州传统吃法面在下、云吞在上，汤不多。',
       where: '宝华路、上下九一带的老面店最集中；各区粉面店也都有，质量参差。',
       price: '大约 15–35 元'
@@ -615,6 +655,7 @@ TRAVEL.register({
     {
       name: '双皮奶与糖水',
       local: '雙皮奶 / 糖水',
+      img: 'food/doubleskin',
       desc: '双皮奶是牛奶蒸出两层奶皮，冷热都有。糖水铺还有姜撞奶、红豆沙、芝麻糊、杨枝甘露、木瓜炖雪耳，饭后或宵夜来一碗。',
       where: '南信、仁信（第十甫路、上下九一带）；越秀文明路是有名的糖水街。',
       price: '一碗大约 10–25 元'
@@ -622,6 +663,7 @@ TRAVEL.register({
     {
       name: '艇仔粥',
       local: '艇仔粥',
+      img: 'food/congee',
       desc: '以前荔湾涌上小艇卖的粥，生滚白粥里放鱼片、鱼皮、叉烧丝、炸花生、油条碎、葱花，料多又香。配一碟肠粉就是标准广州早餐。',
       where: '伍湛记（荔湾泮塘路）、陈添记（宝华路，招牌是爽口鱼皮）；荔湾老城区粥铺很多。',
       price: '一碗大约 10–25 元'
@@ -629,6 +671,7 @@ TRAVEL.register({
     {
       name: '牛杂',
       local: '牛雜',
+      img: 'food/beefoffal',
       desc: '牛肚、牛肠、牛肺、萝卜一锅慢炖，剪成小块装杯，淋辣酱或芥末。广州街头最经典的边走边吃。',
       where: '街头小档和小吃店，荔湾西华路、上下九一带常见；老城区巷子里的街坊档最地道。',
       price: '一份大约 15–35 元'
@@ -1191,5 +1234,263 @@ TRAVEL.register({
     '坐飞机的确认航站楼是 T2 还是 T3',
     '准备一双好走的鞋，老城和白云山都要走不少路',
     '手机电量和充电宝，扫码乘车、付款都靠它'
-  ]
+  ],
+  images: {
+    cover: {
+      src: 'assets/img/guangzhou/cover.webp',
+      alt: '珠江夜色中的广州塔与珠江新城天际线',
+      credit: 'Tim Wu',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Canton_Tower_at_Night_20230722.jpg'
+    },
+    'city/yuexiu': {
+      src: 'assets/img/guangzhou/city-yuexiu.webp',
+      alt: '北京路上的骑楼老建筑',
+      credit: '钉钉',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Beijing_Road,_Guangzhou_1.jpg'
+    },
+    'yuexiu/zhenhai': {
+      src: 'assets/img/guangzhou/yuexiu-zhenhai.webp',
+      alt: '越秀公园里的镇海楼',
+      credit: 'Gary Todd from Xinzheng, China',
+      license: 'CC0',
+      licenseUrl: 'http://creativecommons.org/publicdomain/zero/1.0/deed.en',
+      source: 'https://commons.wikimedia.org/wiki/File:Zhenhai_Tower,_Yuexiu_Park,_Guangzhou_(10075748113).jpg'
+    },
+    'yuexiu/sacredheart': {
+      src: 'assets/img/guangzhou/yuexiu-sacredheart.webp',
+      alt: '骑楼街尽头的石室圣心大教堂双塔',
+      credit: 'Shujianyang',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Sacred_Heart_Cathedral_of_Guangzhou_2025.06_04.jpg'
+    },
+    'yuexiu/sunyatsen': {
+      src: 'assets/img/guangzhou/yuexiu-sunyatsen.webp',
+      alt: '蓝瓦八角的中山纪念堂',
+      credit: '古海岸遗址',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Guangzhou_Yuexiu_Zhongshan_Jinian_Tang_2024-09-19_14.55.41.jpg'
+    },
+    'city/liwan': {
+      src: 'assets/img/guangzhou/city-liwan.webp',
+      alt: '上下九步行街的西关骑楼',
+      credit: 'Daniel Lu (User:dllu)',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Shangxiajiu_Pedestrian_Street_Guangzhou_2026_dllu.jpg'
+    },
+    'liwan/shamian': {
+      src: 'assets/img/guangzhou/liwan-shamian.webp',
+      alt: '沙面绿荫下的欧式老建筑',
+      credit: 'Rutger van der Maar',
+      license: 'CC BY 2.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by/2.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Shamian_003.jpg'
+    },
+    'liwan/chenclan': {
+      src: 'assets/img/guangzhou/liwan-chenclan.webp',
+      alt: '陈家祠正门与屋脊灰塑',
+      credit: 'Shujianyang',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Chen_Clan_Ancestral_Hall_2025.06_03.jpg'
+    },
+    'liwan/yongqing': {
+      src: 'assets/img/guangzhou/liwan-yongqing.webp',
+      alt: '永庆坊街角的修缮骑楼',
+      credit: '钉钉',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:%E6%B0%B8%E5%BA%86%E5%9D%8A.jpg'
+    },
+    'city/tianhe': {
+      src: 'assets/img/guangzhou/city-tianhe.webp',
+      alt: '隔江眺望珠江新城天际线',
+      credit: 'Nissangeniss',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:The_architectural_complex_of_the_Zhujiang_New_Town_in_2017_12(2).jpg'
+    },
+    'tianhe/huacheng': {
+      src: 'assets/img/guangzhou/tianhe-huacheng.webp',
+      alt: '花城广场与两侧摩天楼',
+      credit: '钉钉',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Huacheng_Square,_Guangzhou.jpg'
+    },
+    'tianhe/museum': {
+      src: 'assets/img/guangzhou/tianhe-museum.webp',
+      alt: '「宝盒」造型的广东省博物馆',
+      credit: 'xiquinhosilva',
+      license: 'CC BY 2.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by/2.0',
+      source: 'https://commons.wikimedia.org/wiki/File:53334088348_Guangdong_Museum_(cropped).jpg'
+    },
+    'tianhe/opera': {
+      src: 'assets/img/guangzhou/tianhe-opera.webp',
+      alt: '广州大剧院与珠江新城高楼',
+      credit: 'Meihe Chen',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Guangzhou_Opera_House.png'
+    },
+    'city/haizhu': {
+      src: 'assets/img/guangzhou/city-haizhu.webp',
+      alt: '珠江夜景与两岸灯光',
+      credit: 'Azwari Nugraha',
+      license: 'CC BY 2.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by/2.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Pearl_River_Guangzhou.jpg'
+    },
+    'haizhu/cantontower': {
+      src: 'assets/img/guangzhou/haizhu-cantontower.webp',
+      alt: '俯瞰广州塔与城市新中轴',
+      credit: 'Tim Wu',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Canton_Tower_20241027.jpg'
+    },
+    'haizhu/wetland': {
+      src: 'assets/img/guangzhou/haizhu-wetland.webp',
+      alt: '海珠湿地的水道与小桥',
+      credit: 'CRCHF',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:A_BRIDGE_IN_HAIZHU_WETLAND.jpg'
+    },
+    'haizhu/xiaozhou': {
+      src: 'assets/img/guangzhou/haizhu-xiaozhou.webp',
+      alt: '小洲村河涌边的蚝壳屋与古庙',
+      credit: 'WKDx417',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:GaanFatZouMiu_%26_SaamDaiMiu.jpg'
+    },
+    'city/panyu': {
+      src: 'assets/img/guangzhou/city-panyu.webp',
+      alt: '番禺莲花山的观音像与莲花塔',
+      credit: 'Tim Wu',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Aerial_View,_Guanyin_Statue,_Guangzhou_Lotus_Hill_20230225.jpg'
+    },
+    'panyu/baomo': {
+      src: 'assets/img/guangzhou/panyu-baomo.webp',
+      alt: '宝墨园的石拱桥与水面',
+      credit: 'Nethuzara',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Baomo_Garden_A.jpg'
+    },
+    'panyu/yuyin': {
+      src: 'assets/img/guangzhou/panyu-yuyin.webp',
+      alt: '余荫山房池中的八角亭',
+      credit: 'Zhangzhugang',
+      license: 'CC BY-SA 3.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/3.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Guangzhou_Panyu_Yuyin_Shanfang_2012.11.19_15-54-07.jpg'
+    },
+    'panyu/shawan': {
+      src: 'assets/img/guangzhou/panyu-shawan.webp',
+      alt: '沙湾古镇的留耕堂',
+      credit: '古海岸遗址',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Guangzhou_Panyu_Shawan_Liugeng_Tang_20190922.162333.jpg'
+    },
+    'city/outskirts': {
+      src: 'assets/img/guangzhou/city-outskirts.webp',
+      alt: '从白云山远眺广州城区',
+      credit: 'HMGiovanniV',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:View_of_Guangzhou_from_Mt_Baiyun,_Aug_2022.jpg'
+    },
+    'outskirts/baiyunshan': {
+      src: 'assets/img/guangzhou/outskirts-baiyunshan.webp',
+      alt: '白云山索道穿过山林',
+      credit: 'Shujianyang',
+      license: 'CC BY 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Baiyun_aerial_lift_01.jpg'
+    },
+    'outskirts/whampoa': {
+      src: 'assets/img/guangzhou/outskirts-whampoa.webp',
+      alt: '黄埔军校旧址校门',
+      credit: '慕尼黑啤酒',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Site_of_Whampoa_Military_Academy.jpg'
+    },
+    'food/dimsum': {
+      src: 'assets/img/guangzhou/food-dimsum.webp',
+      alt: '蒸笼里的水晶虾饺',
+      credit: 'Mshuang2',
+      license: 'CC0',
+      licenseUrl: 'http://creativecommons.org/publicdomain/zero/1.0/deed.en',
+      source: 'https://commons.wikimedia.org/wiki/File:Three_dim_sum_in_steamer_basket.jpg'
+    },
+    'food/cheungfun': {
+      src: 'assets/img/guangzhou/food-cheungfun.webp',
+      alt: '淋上酱油的虾米肠粉',
+      credit: 'ZhengZhou',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Dried_shrimp_rice_noodle_roll.jpg'
+    },
+    'food/roastgoose': {
+      src: 'assets/img/guangzhou/food-roastgoose.webp',
+      alt: '广式烧鹅',
+      credit: 'Dinkun Chen',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Cantonese_roasted_goose.jpg'
+    },
+    'food/claypot': {
+      src: 'assets/img/guangzhou/food-claypot.webp',
+      alt: '腊味煲仔饭',
+      credit: 'bryan... from Taipei, Taiwan',
+      license: 'CC BY-SA 2.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/2.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Food_%E8%87%98%E5%91%B3%E7%85%B2%E4%BB%94%E9%A3%AF,_%E6%96%B0%E8%91%A1%E8%8B%91,_Shin_Pu_Yuan,_%E5%8F%B0%E5%8C%97_(21532055812).jpg'
+    },
+    'food/wonton': {
+      src: 'assets/img/guangzhou/food-wonton.webp',
+      alt: '鲜虾云吞面',
+      credit: 'avlxyz',
+      license: 'CC BY-SA 2.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/2.0',
+      source: 'https://commons.wikimedia.org/wiki/File:CantoneseWontonnoodle.jpg'
+    },
+    'food/doubleskin': {
+      src: 'assets/img/guangzhou/food-doubleskin.webp',
+      alt: '一碗双皮奶',
+      credit: '钉钉',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Double_skin_milk_2.jpg'
+    },
+    'food/congee': {
+      src: 'assets/img/guangzhou/food-congee.webp',
+      alt: '艇仔粥',
+      credit: 'ZhengZhou',
+      license: 'CC BY-SA 4.0',
+      licenseUrl: 'https://creativecommons.org/licenses/by-sa/4.0',
+      source: 'https://commons.wikimedia.org/wiki/File:Cantonese_Sampan_Congee_(Boat_Congee).jpeg'
+    },
+    'food/beefoffal': {
+      src: 'assets/img/guangzhou/food-beefoffal.webp',
+      alt: '砂锅牛杂面',
+      credit: '沈澄心',
+      license: 'CC0',
+      licenseUrl: 'http://creativecommons.org/publicdomain/zero/1.0/deed.en',
+      source: 'https://commons.wikimedia.org/wiki/File:%E5%8C%A0%E9%98%BF%E5%A9%86%E7%A0%82%E9%94%85%E7%89%9B%E6%9D%82%E7%B2%89%EF%BC%88%E5%B9%BF%E5%B7%9E%E5%8C%97%E4%BA%AC%E8%B7%AF%E5%BA%97%EF%BC%89_%E7%89%9B%E6%9D%82%E9%9D%A2.jpg'
+    }
+  }
 });
