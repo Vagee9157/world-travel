@@ -152,7 +152,7 @@
     if (!meta || meta.status !== 'live' || !meta.file) return Promise.reject(new Error('unknown country'));
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = meta.file + '?v=10';
+      s.src = meta.file + '?v=11';
       s.onload = () => TRAVEL.countries[id] ? resolve(TRAVEL.countries[id]) : reject(new Error('not registered'));
       s.onerror = () => reject(new Error('load failed'));
       document.head.append(s);
@@ -438,6 +438,7 @@
     const secs = [
       ['overview', '速览', '什么时候去、要准备什么、大概花多少钱', overview],
       ['top', '必去景点', '最值得去的地方，点卡片看详情', topSection],
+      c.history && ['history', '历史', '时代、大事记和人物，点开看相关景点', historySection],
       ['itinerary', '行程', '照着走就行的路线，点城市名看详情', itineraries],
       ['flights', ...L('flights', '航班交通', '从国内怎么飞，落地后怎么走'), flights],
       ['cities', ...L('cities', '城市', '点卡片看景点、美食和住哪'), cities],
@@ -610,6 +611,57 @@
           el('small', null, `${city.name} · ${s.type}`),
           el('span', { class: 'top-desc' }, s.desc)));
     }));
+  }
+
+  // 历史：时代色带（从古到今由浅到深）→ 大事记时间轴 → 人物卡
+  function historySection(c) {
+    const H = c.history;
+    const refBtn = (r) => r && r.city && r.spot ? el('button', { type: 'button', class: 'chip ref', onclick: () => openCity(c, r.city, false, r.spot) }, '📍 ' + r.spot) : null;
+    const eraDetail = el('div', { class: 'era-detail', 'aria-live': 'polite' });
+    const segs = [];
+    const pickEra = (e, btn) => {
+      segs.forEach((b) => b.setAttribute('aria-pressed', String(b === btn)));
+      eraDetail.replaceChildren(
+        el('div', { class: 'sd-head' }, el('b', null, e.name), el('span', null, e.years), e.highlight ? el('span', { class: 'pill-s' }, '✦ ', e.highlight) : null),
+        el('p', null, e.desc),
+        (e.spotRefs || []).length ? el('div', { class: 'day-spots' }, e.spotRefs.map(refBtn)) : null);
+    };
+    const n = H.eras.length;
+    const ribbon = el('div', { class: 'eras', role: 'group', 'aria-label': '历史时代，从古到今' }, H.eras.map((e, i) => {
+      const b = el('button', {
+        type: 'button', class: 'era', 'aria-pressed': 'false',
+        style: { '--o': (0.18 + 0.82 * (n > 1 ? i / (n - 1) : 1)).toFixed(2) },
+        title: `${e.name} · ${e.years}`, onclick: () => pickEra(e, b)
+      }, el('span', { class: 'era-bar' }), el('b', null, e.name), el('small', null, e.years));
+      segs.push(b);
+      return b;
+    }));
+    pickEra(H.eras[n - 1], segs[n - 1]);
+
+    return [
+      H.intro ? el('p', { class: 'hist-intro' }, H.intro) : null,
+      el('div', { class: 'card chart-card' },
+        el('h3', { class: 'card-h' }, '🏯 时代'),
+        ribbon,
+        eraDetail),
+      el('h3', { class: 'sub-h' }, '📜 大事记', el('small', { class: 'count' }, H.events.length)),
+      el('ol', { class: 'events' }, H.events.map((ev) => el('li', null,
+        fold('event', [
+          el('span', { class: 'ev-year' }, ev.year),
+          el('span', { class: 'ev-ico', 'aria-hidden': 'true' }, ev.icon || '•'),
+          el('span', { class: 't-title' }, ev.title),
+          el('span', { class: 'chev', 'aria-hidden': 'true' })
+        ], [el('p', null, ev.desc), ev.ref ? el('div', { class: 'day-spots' }, refBtn(ev.ref)) : null])))),
+      el('h3', { class: 'sub-h' }, '👤 历史人物', el('small', { class: 'count' }, H.people.length)),
+      el('div', { class: 'people' }, H.people.map((p) =>
+        fold('person tile', [
+          el('span', { class: 'avatar', 'aria-hidden': 'true' }, p.icon || p.name.slice(0, 1)),
+          el('span', { class: 'p-main' },
+            el('b', null, p.name),
+            el('small', null, [p.years, p.role].filter(Boolean).join(' · '))),
+          el('span', { class: 'chev', 'aria-hidden': 'true' })
+        ], [p.local && p.local !== p.name ? el('p', { class: 'lc', lang: c.lang.code }, p.local) : null, el('p', null, p.desc), p.ref ? el('div', { class: 'day-spots' }, refBtn(p.ref)) : null])))
+    ];
   }
 
   function cityName(c, id) { const x = c.cities.find((k) => k.id === id); return x ? x.name : id; }
@@ -1111,6 +1163,8 @@
         el('div', { class: 'tiles' }, city.food.map((f) =>
           tile(null, f.name, el('span', { class: 't-val', lang: c.lang.code }, f.local), el('p', null, f.desc)))),
         el('div', { class: 'tiles', style: { 'margin-top': '18px' } },
+          city.history && city.history.length ? tile('📜', '历史上的这里', el('span', { class: 't-val' }, `${city.history.length} 条`),
+            el('ol', { class: 'mini-tl' }, city.history.map((h) => el('li', null, el('b', null, h.year), el('span', null, h.text))))) : null,
           tile('🛏', '住在哪', null, el('p', null, city.stay)),
           city.tips && city.tips.length ? tile('💡', '小贴士', el('span', { class: 't-val' }, `${city.tips.length} 条`), bullets(city.tips)) : null))));
     modal.hidden = false;

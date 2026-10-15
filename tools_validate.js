@@ -85,6 +85,16 @@ for (const meta of index) {
   (c.festivals || []).forEach((f, i) => need(f, ['name', 'month', 'city', 'desc'], `${c.id}/festivals[${i}]`));
   const spotNames = new Set((c.cities || []).flatMap((x) => (x.spots || []).map((sp) => sp.name)));
   (c.topSpots || []).forEach((n) => { if (!spotNames.has(n)) err(`${c.id}/topSpots`, `找不到景点：${n}`); });
+  // 历史里引用的景点要存在
+  const hasSpot = (r) => (c.cities || []).some((x) => x.id === r.city && (x.spots || []).some((sp) => sp.name === r.spot));
+  if (c.history) {
+    need(c.history, ['eras', 'events', 'people'], `${c.id}/history`);
+    const refs2 = [];
+    (c.history.eras || []).forEach((e) => (e.spotRefs || []).forEach((r) => refs2.push([r, `eras/${e.name}`])));
+    (c.history.events || []).forEach((e) => e.ref && refs2.push([e.ref, `events/${e.year}`]));
+    (c.history.people || []).forEach((e) => e.ref && refs2.push([e.ref, `people/${e.name}`]));
+    refs2.forEach(([r, w]) => { if (!hasSpot(r)) err(`${c.id}/history/${w}`, `找不到景点 ${r.city}/${r.spot}`); });
+  }
   (c.foodGuide || []).forEach((f, i) => need(f, ['name', 'local', 'desc'], `${c.id}/foodGuide[${i}]`));
 
   const nCities = (c.cities || []).length;
