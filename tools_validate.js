@@ -83,6 +83,8 @@ for (const meta of index) {
   (c.stays || []).forEach((f) => refs.push([f.img, `stays/${f.type}`]));
   refs.forEach(([k, w]) => { if (k && !imgs[k]) err(`${c.id}/${w}`, `img 引用了不存在的图片 ${k}`); });
   (c.festivals || []).forEach((f, i) => need(f, ['name', 'month', 'city', 'desc'], `${c.id}/festivals[${i}]`));
+  const spotNames = new Set((c.cities || []).flatMap((x) => (x.spots || []).map((sp) => sp.name)));
+  (c.topSpots || []).forEach((n) => { if (!spotNames.has(n)) err(`${c.id}/topSpots`, `找不到景点：${n}`); });
   (c.foodGuide || []).forEach((f, i) => need(f, ['name', 'local', 'desc'], `${c.id}/foodGuide[${i}]`));
 
   const nCities = (c.cities || []).length;

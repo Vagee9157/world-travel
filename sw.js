@@ -1,6 +1,6 @@
 // 网络优先：有网拿最新内容，没网用上次缓存的；联网打开过一次就能离线看
-const CACHE = 'world-travel-v8';
-const CORE = ['./', 'index.html', 'assets/css/style.css?v=8', 'assets/data/index.js?v=8', 'assets/js/app.js?v=8', 'assets/js/globe.js?v=8', 'assets/vendor/d3-array.min.js', 'assets/vendor/d3-geo.min.js', 'assets/vendor/topojson-client.min.js', 'assets/data/countries-110m.json?v=1', 'assets/data/japan.js?v=8', 'assets/data/korea.js?v=8', 'assets/data/guangzhou.js?v=8', 'assets/data/eastasia-land-50m.json?v=1', 'assets/icon.svg', 'assets/apple-touch-icon.png', 'manifest.json'];
+const CACHE = 'world-travel-v9';
+const CORE = ['./', 'index.html', 'assets/css/style.css?v=9', 'assets/data/index.js?v=9', 'assets/js/app.js?v=9', 'assets/js/globe.js?v=9', 'assets/vendor/d3-array.min.js', 'assets/vendor/d3-geo.min.js', 'assets/vendor/topojson-client.min.js', 'assets/data/countries-110m.json?v=1', 'assets/data/japan.js?v=9', 'assets/data/korea.js?v=9', 'assets/data/guangzhou.js?v=9', 'assets/data/eastasia-land-50m.json?v=1', 'assets/icon.svg', 'assets/apple-touch-icon.png', 'manifest.json'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(CORE)).then(() => self.skipWaiting()));

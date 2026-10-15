@@ -90,7 +90,7 @@
     if (!meta || meta.status !== 'live' || !meta.file) return Promise.reject(new Error('unknown country'));
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = meta.file + '?v=8';
+      s.src = meta.file + '?v=9';
       s.onload = () => TRAVEL.countries[id] ? resolve(TRAVEL.countries[id]) : reject(new Error('not registered'));
       s.onerror = () => reject(new Error('load failed'));
       document.head.append(s);
@@ -254,6 +254,23 @@
     });
   }
 
+  // 热门景点：数据里有 topSpots 就按它；否则按「被行程提到的次数 + 有没有照片」排，并保证每个城市都有代表
+  function topSpots(c, n) {
+    const all = [];
+    c.cities.forEach((city) => city.spots.forEach((s) => all.push({ s, city })));
+    if (c.topSpots && c.topSpots.length) {
+      return c.topSpots.map((name) => all.find((x) => x.s.name === name)).filter(Boolean).slice(0, n);
+    }
+    const count = {};
+    c.itineraries.forEach((it) => it.plan.forEach((d) => (d.spots || []).forEach((name) => { count[d.city + '/' + name] = (count[d.city + '/' + name] || 0) + 1; })));
+    const score = (x) => (count[x.city.id + '/' + x.s.name] || 0) * 2 + (x.s.img ? 3 : 0) + (x.s.type === '人文' || x.s.type === '自然' ? 0.5 : 0);
+    const ranked = all.map((x, i) => ({ ...x, sc: score(x) - i * 0.001 })).sort((a, b) => b.sc - a.sc);
+    const pick = [], seenCity = new Set();
+    for (const x of ranked) if (!seenCity.has(x.city.id)) { pick.push(x); seenCity.add(x.city.id); }
+    for (const x of ranked) if (pick.length < n && !pick.includes(x)) pick.push(x);
+    return pick.slice(0, n).sort((a, b) => b.sc - a.sc);
+  }
+
   // 当地时间和与北京的时差
   function localTime(meta) {
     if (!meta.tz) return null;
@@ -292,7 +309,8 @@
         el('p', null, c.tagline),
         el('ul', { class: 'dc-facts' },
           el('li', null, routeLine),
-          el('li', null, `${c.cities.length} 座城市 · ${c.itineraries.length} 条行程`),
+          el('li', null, `${c.cities.length} ${china ? '个片区' : '座城市'} · ${c.itineraries.length} 条行程`),
+          el('li', null, '📍 热门：' + topSpots(c, 4).map((x) => x.s.name.split(' · ')[0]).join(' · ')),
           best ? el('li', null, `最舒服的季节：${best}`) : null,
           localTime(meta) ? el('li', null, localTime(meta)) : null),
         el('span', { class: 'dc-go' }, '打开攻略 →')));
@@ -357,6 +375,7 @@
     // 章节按数据有无决定是否出现，编号自动排
     const secs = [
       ['overview', '速览', '什么时候去、要准备什么、大概花多少钱', overview],
+      ['top', '必去景点', '最值得去的地方，点卡片看详情', topSection],
       ['itinerary', '行程', '照着走就行的路线，点城市名看详情', itineraries],
       ['flights', ...L('flights', '航班交通', '从国内怎么飞，落地后怎么走'), flights],
       ['cities', ...L('cities', '城市', '点卡片看景点、美食和住哪'), cities],
@@ -482,6 +501,23 @@
               el('div', { class: 'pd' }, b.perDay),
               el('p', null, b.desc))))))
     ];
+  }
+
+  function topSection(c) {
+    const list = topSpots(c, 16);
+    return el('div', { class: 'tops' }, list.map(({ s, city }, i) => {
+      const im = imgOf(c, s.img) || imgOf(c, city.img);
+      return el('button', {
+        type: 'button', class: 'top-card', style: { '--cc': city.color },
+        onclick: () => openCity(c, city.id, false, s.name), 'aria-label': `${s.name}，${city.name}，看详情`
+      },
+        im ? el('img', { src: thumbOf(im), alt: '', loading: 'lazy', decoding: 'async' }) : el('span', { class: 'top-type', 'aria-hidden': 'true' }, s.local),
+        el('span', { class: 'top-rank' }, String(i + 1)),
+        el('span', { class: 'top-cap' },
+          el('b', null, s.name),
+          el('small', null, `${city.name} · ${s.type}`),
+          el('span', { class: 'top-desc' }, s.desc)));
+    }));
   }
 
   function cityName(c, id) { const x = c.cities.find((k) => k.id === id); return x ? x.name : id; }

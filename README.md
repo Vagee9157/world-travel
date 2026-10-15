@@ -26,6 +26,7 @@
 | 板块 | 内容 |
 |---|---|
 | 速览 | 时差、货币、电源、紧急电话等关键信息；四季推荐度；签证入境；每日预算三档 |
+| 必去景点 | 16 个热门景点照片卡片，点开直达所在城市并定位到景点（名单在数据的 `topSpots`） |
 | 行程 | 多条可直接照走的路线，按天排成时间线，每天提到的景点点一下直达城市详情 |
 | 航班交通 | 国内主要城市直飞时长和航司、主要机场怎么进城、订票技巧、当地交通 |
 | 美食 / 节庆 / 住宿购物 | 必吃清单配图、吃饭规矩；全年祭典；住宿类型、买什么、免税（有数据的国家才出现） |
@@ -84,6 +85,7 @@ language.numbers[]: { n, local, roman }，language.priceNote，language.vocab[]:
 images: { key: { src, alt, credit, license, licenseUrl, source } }   key 'cover' 是国家封面
 notice: { title, updated, points[] }   出发前必看；budgetNote 预算说明
 itineraries[].plan[].spots[]   当天景点名（要能在该城市 spots 里找到）
+topSpots[]   必去景点名单（spot.name），首页卡片取前 4 个
 ```
 
 ## 目录
