@@ -73,6 +73,8 @@ for (const meta of index) {
   Object.entries(imgs).forEach(([k, im]) => {
     need(im, ['src', 'alt', 'credit', 'license', 'source'], `${c.id}/images/${k}`);
     if (im.src && !fs.existsSync(path.join(__dirname, im.src))) err(`${c.id}/images/${k}`, `文件不存在：${im.src}`);
+    const th = im.src && im.src.replace(/\/([^/]+)$/, '/thumb/$1');
+    if (th && !fs.existsSync(path.join(__dirname, th))) err(`${c.id}/images/${k}`, `缩略图不存在：${th}（用 cwebp -q 68 -resize 640 0 生成）`);
     if (im.license && (!OK_LICENSE.test(im.license) || /nc|nd/i.test(im.license.replace(/^cc by(-sa)?/i, '')))) err(`${c.id}/images/${k}`, `许可不在白名单：${im.license}`);
   });
   const refs = [];

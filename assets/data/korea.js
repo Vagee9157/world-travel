@@ -38,10 +38,11 @@ TRAVEL.register({
     ]
   },
 
+  budgetNote: '人民币，按人头算，不含国际机票和签证。',
   budget: [
-    { level: '省钱', perDay: '约 ¥500–800 / 天', desc: '青旅或 Guest House、吃路边摊和平价韩餐、地铁出行。' },
-    { level: '舒适', perDay: '约 ¥1000–1500 / 天', desc: '明洞弘大一带的四星酒店、吃烤肉、偶尔打车。' },
-    { level: '品质', perDay: '¥2000 起 / 天', desc: '五星酒店、韩牛烤肉和高级韩定食、包车游。' }
+    { level: '省钱', perDay: '约 500–800 元 / 天', desc: '青旅或 Guest House、吃路边摊和平价韩餐、地铁出行。' },
+    { level: '舒适', perDay: '约 1000–1500 元 / 天', desc: '明洞弘大一带的四星酒店、吃烤肉、偶尔打车。' },
+    { level: '品质', perDay: '2000 元起 / 天', desc: '五星酒店、韩牛烤肉和高级韩定食、包车游。' }
   ],
 
   flights: {
@@ -55,6 +56,8 @@ TRAVEL.register({
       { from: '北京', to: '首尔', duration: '约 2 小时', airlines: '国航、大韩航空、韩亚航空' },
       { from: '上海', to: '首尔', duration: '约 2 小时', airlines: '东航、大韩、韩亚、春秋、吉祥、济州航空' },
       { from: '广州 / 深圳', to: '首尔', duration: '约 3.5–4 小时', airlines: '南航、大韩、韩亚、德威航空' },
+      { from: '香港', to: '首尔', duration: '约 3.5 小时', airlines: '国泰、大韩、韩亚' },
+      { from: '成都', to: '首尔', duration: '约 3.5–4 小时', airlines: '国航、川航、韩亚' },
       { from: '青岛', to: '首尔', duration: '约 1.5 小时', airlines: '山航、大韩、韩亚' },
       { from: '上海', to: '釜山', duration: '约 1.5–2 小时', airlines: '东航、大韩、济州航空' },
       { from: '上海', to: '济州', duration: '约 1–1.5 小时', airlines: '东航、春秋、吉祥、济州航空' }

@@ -47,14 +47,18 @@
       title: `图片：${im.credit} · ${im.license}`, onclick: (e) => e.stopPropagation()
     }, '© ', im.credit, ' · ', im.license);
   }
-  function photo(c, key, cls, withCredit) {
+  // 缩略图在同目录的 thumb/ 下（宽 640），卡片里用缩略图，看大图时才加载原图
+  function thumbOf(im) { return im.src.replace(/\/([^/]+)$/, '/thumb/$1'); }
+  function photo(c, key, cls, withCredit, small) {
     const im = imgOf(c, key);
     if (!im) return null;
+    const open = (e) => { e.stopPropagation(); openLightbox([im], 0, e.currentTarget); };
     return el('figure', {
-      class: 'photo zoomable' + (cls ? ' ' + cls : ''),
-      onclick: (e) => { e.stopPropagation(); openLightbox([im], 0); }
+      class: 'photo zoomable' + (cls ? ' ' + cls : ''), tabindex: '0', role: 'button', 'aria-label': `看大图：${im.alt || ''}`,
+      onclick: open,
+      onkeydown: (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(e); } }
     },
-      el('img', { src: im.src, alt: im.alt || '', loading: 'lazy', decoding: 'async' }),
+      el('img', { src: small ? thumbOf(im) : im.src, alt: im.alt || '', loading: 'lazy', decoding: 'async' }),
       withCredit === false ? null : credit(im));
   }
 
@@ -64,7 +68,7 @@
     if (!meta || meta.status !== 'live' || !meta.file) return Promise.reject(new Error('unknown country'));
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = meta.file + '?v=3';
+      s.src = meta.file + '?v=4';
       s.onload = () => TRAVEL.countries[id] ? resolve(TRAVEL.countries[id]) : reject(new Error('not registered'));
       s.onerror = () => reject(new Error('load failed'));
       document.head.append(s);
@@ -121,13 +125,24 @@
 
   // ---------- 首页 ----------
   let homeRegion = '全部';
+  // 出发城市（地球上的航线起点，和各国「航班交通」里的出发地对应）
+  const ORIGINS = [
+    { name: '北京', lonlat: [116.4, 39.9] }, { name: '上海', lonlat: [121.47, 31.23] },
+    { name: '广州', lonlat: [113.26, 23.13] }, { name: '深圳', lonlat: [114.06, 22.54] },
+    { name: '成都', lonlat: [104.07, 30.57] }, { name: '香港', lonlat: [114.17, 22.32] }
+  ];
+  let globe = null;
+  let renderToken = 0;
+
   function renderHome() {
+    const token = ++renderToken;
     document.title = '环游世界 · 旅行卡片';
     setTheme(null);
     renderTopnav(null);
     const live = INDEX.filter((c) => c.status === 'live');
     app.replaceChildren(el('div', { class: 'loading' }, '正在展开地图…'));
     Promise.all(live.map((c) => loadCountry(c.id).catch(() => null))).then(() => {
+      if (token !== renderToken) return;
       const loaded = live.map((c) => TRAVEL.countries[c.id]).filter(Boolean);
       const sum = (fn) => loaded.reduce((n, c) => n + fn(c), 0);
       const regions = ['全部', ...new Set(INDEX.map((c) => c.region))];
@@ -147,22 +162,109 @@
         }, r)));
       drawGrid();
 
+      // ---- 地球 + 选中目的地卡片
+      let origin = ORIGINS.find((o) => o.name === store.get('origin', '上海')) || ORIGINS[1];
+      let selId = store.get('globeSel', 'japan');
+      if (!byId[selId]) selId = live[0] ? live[0].id : INDEX[0].id;
+      const cardHost = el('div', { class: 'dest-host', 'aria-live': 'polite' });
+      const pills = el('div', { class: 'dest-pills', role: 'group', 'aria-label': '选择目的地' });
+      const showCard = (id) => {
+        selId = id;
+        store.set('globeSel', id);
+        cardHost.replaceChildren(destCard(byId[id], origin));
+        pills.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
+      };
+      pills.append(...INDEX.map((m) => el('button', {
+        type: 'button', class: 'pill' + (m.status === 'live' ? ' live' : ''), 'data-id': m.id, style: { '--pc': m.accent },
+        onclick: () => { if (globe) globe.select(m.id); else showCard(m.id); }
+      }, el('i', { 'aria-hidden': 'true' }), m.name)));
+      const originSel = el('select', {
+        'aria-label': '出发城市',
+        onchange: (e) => {
+          origin = ORIGINS.find((o) => o.name === e.target.value) || origin;
+          store.set('origin', origin.name);
+          if (globe) globe.setOrigin(origin);
+          showCard(selId);
+        }
+      }, ORIGINS.map((o) => el('option', { value: o.name, selected: o.name === origin.name }, o.name)));
+      const globeHost = el('div', { class: 'globe-host' });
+      const hasGlobe = window.Globe && Globe.available();
+
       app.replaceChildren(
-        el('section', { class: 'wrap home-hero' },
-          el('div', { class: 'eyebrow' }, 'Around the World · 旅行卡片集'),
-          el('h1', null, '一张卡片，', el('em', null, '一个目的地')),
-          el('p', { class: 'lede' }, '每个国家都整理成一套卡片：怎么排行程、怎么飞、去哪些城市、看哪些人文景点、当地有什么讲究，再学几句能用上的当地话。先从日本和韩国开始，后面一个个点亮。'),
-          el('div', { class: 'stats' },
-            stat(loaded.length, '个国家已上线'),
-            stat(sum((c) => c.cities.length), '座城市'),
-            stat(sum((c) => c.itineraries.length), '条行程'),
-            stat(sum((c) => c.language.phrases.reduce((n, g) => n + g.items.length, 0)), '句旅行用语'))
-        ),
-        el('section', { class: 'wrap' }, chips, grid),
+        el('section', { class: 'wrap home-hero globe-hero' + (hasGlobe ? '' : ' no-globe') },
+          el('div', { class: 'gh-intro' },
+            el('div', { class: 'eyebrow' }, 'Around the World · 旅行卡片集'),
+            el('h1', null, '转动地球，', el('em', null, '挑下一站')),
+            el('p', { class: 'lede' }, '每个国家整理成一套卡片：怎么排行程、怎么飞、去哪些城市、看哪些人文景点、当地有什么讲究，再学几句能用上的当地话。先从日本和韩国开始，后面一个个点亮。'),
+            el('label', { class: 'origin' }, '从 ', originSel, ' 出发')),
+          hasGlobe ? el('div', { class: 'gh-globe' },
+            globeHost,
+            el('p', { class: 'globe-hint' }, '拖动旋转 · 点国家看看')) : null,
+          el('div', { class: 'gh-card' },
+            pills,
+            cardHost,
+            el('div', { class: 'stats' },
+              stat(loaded.length, '个国家已上线'),
+              stat(sum((c) => c.cities.length), '座城市'),
+              stat(sum((c) => c.itineraries.length), '条行程'),
+              stat(sum((c) => c.language.phrases.reduce((n, g) => n + g.items.length, 0)), '句旅行用语')))),
+        el('section', { class: 'wrap' }, el('h2', { class: 'home-h2' }, '全部目的地'), chips, grid),
         wishStrip()
       );
+
+      if (hasGlobe) {
+        globe = Globe.create(globeHost, {
+          places: INDEX, origin, selected: selId,
+          onSelect: (p) => showCard(p.id),
+          onError: () => { const h = app.querySelector('.globe-hint'); if (h) h.textContent = '世界地图没加载出来，用目的地按钮也能选'; }
+        });
+        globe.select(selId);
+      } else {
+        showCard(selId);
+      }
     });
   }
+
+  // 当地时间和与北京的时差
+  function localTime(meta) {
+    if (!meta.tz) return null;
+    try {
+      const now = new Date();
+      const fmt = (tz) => new Intl.DateTimeFormat('zh-CN', { timeZone: tz, hour: '2-digit', minute: '2-digit', hour12: false }).format(now);
+      const off = (tz) => { const p = new Intl.DateTimeFormat('en-US', { timeZone: tz, timeZoneName: 'longOffset' }).formatToParts(now).find((x) => x.type === 'timeZoneName').value; const m = p.match(/([+-])(\d+):?(\d+)?/); return m ? (m[1] === '-' ? -1 : 1) * (+m[2] + (+m[3] || 0) / 60) : 0; };
+      const d = off(meta.tz) - 8;
+      const diff = d === 0 ? '和北京同一时间' : `比北京${d > 0 ? '快' : '慢'} ${Math.abs(d)} 小时`;
+      return `🕐 当地 ${fmt(meta.tz)}，${diff}`;
+    } catch (e) { return null; }
+  }
+
+  function destCard(meta, origin) {
+    const c = TRAVEL.countries[meta.id];
+    if (meta.status !== 'live' || !c) {
+      return el('div', { class: 'dest-card soon', style: { '--pc': meta.accent } },
+        el('div', { class: 'dc-body' },
+          el('div', { class: 'dc-top' }, el('span', { class: 'dc-local' }, meta.nameLocal), el('span', { class: 'dc-tag' }, '筹备中')),
+          el('h3', null, meta.name, el('small', null, meta.nameEn)),
+          el('p', null, `${meta.region} · 这一站还在整理，很快点亮。`),
+          localTime(meta) ? el('ul', { class: 'dc-facts' }, el('li', null, localTime(meta))) : null));
+    }
+    const cover = imgOf(c, 'cover');
+    const route = c.flights.routes.find((r) => r.from.includes(origin.name));
+    const best = c.seasons.filter((x) => x.rating >= 5).map((x) => x.name).join('、');
+    return el('a', { class: 'dest-card live' + (cover ? ' has-img' : ''), href: '#/' + meta.id, style: { '--pc': meta.accent } },
+      cover ? el('img', { class: 'dc-img', src: thumbOf(cover), alt: '', decoding: 'async' }) : el('div', { class: 'dc-img dc-type', 'aria-hidden': 'true' }, meta.nameLocal),
+      el('div', { class: 'dc-body' },
+        el('div', { class: 'dc-top' }, el('span', { class: 'dc-local' }, meta.nameLocal), el('span', { class: 'dc-tag' }, '已上线')),
+        el('h3', null, meta.name, el('small', null, meta.nameEn)),
+        el('p', null, c.tagline),
+        el('ul', { class: 'dc-facts' },
+          el('li', null, '✈ ', route ? `${origin.name}直飞${route.to}${route.duration}` : `从${origin.name}出发：看攻略里的「航班交通」`),
+          el('li', null, `${c.cities.length} 座城市 · ${c.itineraries.length} 条行程`),
+          best ? el('li', null, `最舒服的季节：${best}`) : null,
+          localTime(meta) ? el('li', null, localTime(meta)) : null),
+        el('span', { class: 'dc-go' }, '打开攻略 →')));
+  }
+
   function stat(n, label) { return el('div', { class: 'stat' }, el('b', null, n), el('span', null, label)); }
 
   function postcard(meta) {
@@ -176,7 +278,7 @@
     ];
     if (meta.status === 'live' && c) {
       const cover = imgOf(c, 'cover');
-      if (cover) inner.unshift(el('img', { class: 'pc-bg', src: cover.src, alt: '', loading: 'lazy', decoding: 'async' }));
+      if (cover) inner.unshift(el('img', { class: 'pc-bg', src: thumbOf(cover), alt: '', loading: 'lazy', decoding: 'async' }));
       inner.push(el('div', { class: 'pc-meta' },
         el('span', null, el('b', null, c.cities.length), ' 座城市'),
         el('span', null, el('b', null, c.itineraries.length), ' 条行程'),
@@ -204,8 +306,9 @@
   let current = null;
   function setTheme(theme) {
     const r = document.documentElement.style;
-    if (theme) { r.setProperty('--accent', theme.accent); r.setProperty('--accent2', theme.accent2); }
-    else { r.removeProperty('--accent'); r.removeProperty('--accent2'); }
+    // 只写基色，浅色/暗色下实际用的 --accent 在 CSS 里按配色方案换算
+    if (theme) { r.setProperty('--accent-base', theme.accent); r.setProperty('--accent2-base', theme.accent2); }
+    else { r.removeProperty('--accent-base'); r.removeProperty('--accent2-base'); }
   }
 
   function renderCountry(c) {
@@ -246,12 +349,12 @@
       panel.setAttribute('role', 'tabpanel');
       const prev = secs[i - 1], next = secs[i + 1];
       panel.append(el('div', { class: 'pager' },
-        prev ? el('button', { type: 'button', class: 'pg prev', onclick: () => showTab(prev[0], true) }, el('small', null, '上一章'), '← ' + label(prev)) : el('span'),
-        next ? el('button', { type: 'button', class: 'pg next', onclick: () => showTab(next[0], true) }, el('small', null, '下一章'), label(next) + ' →') : el('span')));
+        prev ? el('button', { type: 'button', class: 'pg prev', onclick: () => showTab(prev[0], true, true) }, el('small', null, '上一章'), '← ' + label(prev)) : el('span'),
+        next ? el('button', { type: 'button', class: 'pg next', onclick: () => showTab(next[0], true, true) }, el('small', null, '下一章'), label(next) + ' →') : el('span')));
       return panel;
     });
 
-    function showTab(id, byUser) {
+    function showTab(id, byUser, focusPanel) {
       store.set(tabKey, id);
       panels.forEach((p) => { p.hidden = p.id !== 'sec-' + id; });
       navButtons.forEach((b) => {
@@ -266,9 +369,14 @@
         navWrap.scrollTo({ left: navWrap.scrollLeft + (br.left - wr.left) - (navWrap.clientWidth - br.width) / 2, behavior: byUser ? 'smooth' : 'auto' });
       }
       if (byUser) {
-        // 已经往下滚了就回到标签栏下方，从新章节开头看
-        const top = subnav.getBoundingClientRect().top + window.scrollY - document.querySelector('.topbar').offsetHeight;
-        if (window.scrollY > top) window.scrollTo({ top, behavior: 'auto' });
+        // 已经往下滚了就回到标签栏下方，从新章节开头看（用不吸顶的头图底边来算位置）
+        const hero = app.querySelector('.c-hero');
+        const top = hero.getBoundingClientRect().bottom + window.scrollY - document.querySelector('.topbar').offsetHeight;
+        if (window.scrollY > top + 1) window.scrollTo({ top, behavior: 'auto' });
+        if (focusPanel) {
+          const h = document.querySelector('#sec-' + id + ' h2');
+          if (h) { h.tabIndex = -1; h.focus({ preventScroll: true }); }
+        }
       }
     }
     // 左右方向键在标签之间切换
@@ -287,7 +395,10 @@
             el('a', { class: 'back', href: '#/' }, '← 全部目的地'),
             el('h1', null, c.name, el('span', { class: 'en' }, c.nameEn)),
             el('p', { class: 'tagline' }, c.tagline),
-            el('p', { class: 'intro' }, c.intro)),
+            el('p', { class: 'intro' }, c.intro),
+            c.notice ? el('div', { class: 'notice', role: 'note' },
+              el('div', { class: 'notice-top' }, el('b', null, c.notice.title), c.notice.updated ? el('span', null, '更新于 ' + c.notice.updated) : null),
+              el('ul', { class: 'dots' }, c.notice.points.map((t) => el('li', null, t)))) : null),
           cover ? photo(c, 'cover', 'hero-photo') : null)),
       subnav,
       el('div', { class: 'wrap' }, panels)
@@ -326,7 +437,8 @@
           el('h3', null, c.visa.title),
           el('ul', { class: 'dots' }, c.visa.points.map((p) => el('li', null, p)))),
         el('div', { class: 'card' },
-          el('h3', { style: { 'font-size': '18px', 'margin-bottom': '10px' } }, '每天花多少（不含机票）'),
+          el('h3', { style: { 'font-size': '18px', 'margin-bottom': '4px' } }, '每天花多少'),
+          el('p', { class: 'meta-line', style: { 'margin-bottom': '10px' } }, c.budgetNote || '人民币，不含机票'),
           el('div', { class: 'grid', style: { gap: '12px' } }, c.budget.map((b) =>
             el('div', { class: 'budget' },
               el('div', { class: 'lv' }, b.level),
@@ -363,7 +475,8 @@
             el('div', { class: 'card' },
               el('div', { class: 'day-top' },
                 el('span', { class: 'day-city' }, `第 ${i + 1} 天 · ${cityName(c, d.city)}`),
-                el('h4', null, d.title)),
+                el('h4', null, d.title),
+                el('button', { type: 'button', class: 'day-more', onclick: () => openCity(c, d.city) }, cityName(c, d.city) + '景点 →')),
               el('ul', null, d.items.map((t) => el('li', null, t))))))));
     };
     draw();
@@ -400,7 +513,7 @@
   function cityHead(c, city, Tag, withCredit) {
     const im = imgOf(c, city.img);
     return el('div', { class: 'city-head' + (im ? ' has-img' : '') },
-      im ? el('img', { class: 'head-bg', src: im.src, alt: im.alt || '', loading: withCredit ? 'eager' : 'lazy', decoding: 'async' }) : null,
+      im ? el('img', { class: 'head-bg', src: withCredit ? im.src : thumbOf(im), alt: im.alt || '', loading: withCredit ? 'eager' : 'lazy', decoding: 'async' }) : null,
       im && withCredit ? credit(im) : null,
       el('span', { class: city.local.length > 3 ? 'big long' : 'big', 'aria-hidden': 'true' }, city.local),
       el('span', { class: 'area' }, city.area),
@@ -431,8 +544,8 @@
   function food(c) {
     return [
       el('div', { class: 'foods' }, c.foodGuide.map((f) =>
-        el('div', { class: 'card dish' + (imgOf(c, f.img) ? ' has-img' : '') },
-          photo(c, f.img, 'dish-photo'),
+        el('div', { class: 'card dish has-img' },
+          photo(c, f.img, 'dish-photo', true, true) || el('div', { class: 'dish-photo dish-type', 'aria-hidden': 'true' }, f.local),
           el('div', { class: 'dish-text' },
             el('div', { class: 'dish-top' },
               el('h4', null, f.name),
@@ -466,8 +579,8 @@
       c.stays ? [
         el('h3', { class: 'sub-h first' }, '住哪种'),
         el('div', { class: 'grid g-3' }, c.stays.map((s) =>
-          el('div', { class: 'card stay' + (imgOf(c, s.img) ? ' has-img' : '') },
-            photo(c, s.img, 'stay-photo'),
+          el('div', { class: 'card stay has-img' },
+            photo(c, s.img, 'stay-photo', true, true) || el('div', { class: 'stay-photo dish-type', 'aria-hidden': 'true' }, s.local),
             el('div', { class: 'stay-text' },
               el('div', { class: 'stay-top' },
                 el('span', { class: 'e-ico', 'aria-hidden': 'true' }, s.icon),
@@ -498,9 +611,9 @@
     const draw = () => {
       const list = all.filter((x) => kind === '全部' || x.kind === kind);
       grid.replaceChildren(...list.map((im, i) => el('button', {
-        type: 'button', class: 'g-item', onclick: () => openLightbox(list, i), 'aria-label': `看大图：${im.alt}`
+        type: 'button', class: 'g-item', onclick: (e) => openLightbox(list, i, e.currentTarget), 'aria-label': `看大图：${im.alt}`
       },
-        el('img', { src: im.src, alt: '', loading: 'lazy', decoding: 'async' }),
+        el('img', { src: thumbOf(im), alt: '', loading: 'lazy', decoding: 'async' }),
         el('span', { class: 'g-cap' }, el('b', null, im.alt), el('small', null, `${im.credit} · ${im.license}`)))));
     };
     const chips = el('div', { class: 'chips' }, kinds.map((k) => el('button', {
@@ -580,8 +693,12 @@
             p.note ? el('div', { class: 'note' }, p.note) : null,
             actions)));
         if (mode !== 'list') {
+          const front = card.querySelector('.face.front'), back = card.querySelector('.face.back');
+          back.inert = true;
           const flip = () => {
             card.classList.toggle('flipped');
+            const on = card.classList.contains('flipped');
+            front.inert = on; back.inert = !on;
             if (card.classList.contains('flipped') && canSpeak && store.get('autospeak', false)) speak(p.local, code);
           };
           card.addEventListener('click', flip);
@@ -623,13 +740,16 @@
           el('p', { style: { 'font-size': '14px' } }, L.intro),
           el('div', { class: 'words' }, L.advantages.map((w) =>
             el('div', { class: 'word' }, el('b', { lang: code }, w.word), el('span', null, w.reading), el('span', null, w.meaning))))),
-        el('div', { class: 'card' }, L.scripts.map((s, i) =>
-          el('div', { class: 'script', style: i ? { 'margin-top': '18px' } : null },
-            el('h4', null, s.title),
+        el('div', { class: 'card scripts' }, L.scripts.map((s, i) =>
+          el('details', { class: 'script', open: i === 0 },
+            el('summary', null, s.title, el('small', null, `${s.chars.length} 个`)),
             el('p', null, s.desc, canSpeak ? '（点字母听发音）' : ''),
             el('div', { class: 'kana' }, s.chars.map(([ch, ro]) =>
               el('button', { type: 'button', lang: code, 'aria-label': `${ch} ${ro}`, onclick: () => speak(ch, code) },
                 el('b', null, ch), el('small', null, ro)))))))),
+      el('div', { class: 'lang-bar' }, chips, progress, modeBox),
+      grid,
+      (L.numbers || L.vocab) ? el('h3', { class: 'sub-h' }, '数字和常见词') : null,
       (L.numbers || L.vocab) ? el('div', { class: 'lang-extra' },
         L.numbers ? el('div', { class: 'card nums-card' },
           el('h4', null, '数字'),
@@ -644,8 +764,7 @@
             el('b', { lang: code }, w.local),
             el('span', { class: 'roman' }, w.roman),
             el('span', { class: 'zh' }, w.zh))))))) : null,
-      el('div', { class: 'lang-bar' }, chips, progress, modeBox),
-      grid,
+
       canSpeak ? null : el('p', { class: 'empty', style: { 'margin-top': '10px' } }, '这个浏览器不支持朗读，换 Safari 或 Chrome 试试。')
     ];
   }
@@ -662,11 +781,15 @@
     const key = 'check:' + c.id;
     const meta = el('div', { class: 'check-meta' });
     const list = el('div', { class: 'checklist' });
-    const draw = () => {
+    const drawMeta = () => {
       const done = store.get(key, []);
       meta.replaceChildren(
         el('span', null, `已完成 ${done.length} / ${c.checklist.length}`),
         ...(done.length ? [el('button', { class: 'linkbtn', type: 'button', onclick: () => { store.set(key, []); draw(); } }, '清空')] : []));
+    };
+    const draw = () => {
+      const done = store.get(key, []);
+      drawMeta();
       list.replaceChildren(...c.checklist.map((t, i) => el('label', { class: 'check' },
         el('input', {
           type: 'checkbox', checked: done.includes(i),
@@ -674,7 +797,7 @@
             const cur = store.get(key, []).filter((x) => x !== i);
             if (e.target.checked) cur.push(i);
             store.set(key, cur);
-            draw();
+            drawMeta();
           }
         }),
         el('span', null, t))));
@@ -688,11 +811,12 @@
   lb.hidden = true;
   document.body.append(lb);
   let lbList = [], lbIdx = 0, lbFocus = null, touchX = null;
-  function openLightbox(list, i) {
-    lbList = list; lbIdx = i; lbFocus = document.activeElement;
+  function openLightbox(list, i, from) {
+    lbList = list; lbIdx = i; lbFocus = from || document.activeElement;
     drawLightbox();
     lb.hidden = false;
     document.body.style.overflow = 'hidden';
+    syncInert();
     lb.querySelector('.lb-close').focus();
   }
   function drawLightbox() {
@@ -707,16 +831,24 @@
           el('span', null, (many ? `${lbIdx + 1} / ${lbList.length} · ` : '') + `图：${im.credit} · ${im.license} · `,
             el('a', { href: im.source, target: '_blank', rel: 'noopener noreferrer' }, '原图与许可')))),
       el('button', { class: 'lb-close', type: 'button', 'aria-label': '关闭', onclick: closeLightbox }, '✕'),
-      many ? [
+      ...(many ? [
         el('button', { class: 'lb-nav prev', type: 'button', 'aria-label': '上一张', onclick: () => stepLightbox(-1) }, '‹'),
         el('button', { class: 'lb-nav next', type: 'button', 'aria-label': '下一张', onclick: () => stepLightbox(1) }, '›')
-      ] : null);
+      ] : []));
   }
-  function stepLightbox(d) { lbIdx = (lbIdx + d + lbList.length) % lbList.length; drawLightbox(); }
+  function stepLightbox(d) {
+    const was = document.activeElement && document.activeElement.classList;
+    const keep = was && (was.contains('prev') ? '.lb-nav.prev' : was.contains('next') ? '.lb-nav.next' : '.lb-close');
+    lbIdx = (lbIdx + d + lbList.length) % lbList.length;
+    drawLightbox();
+    const f = lb.querySelector(keep || '.lb-close');
+    if (f) f.focus();
+  }
   function closeLightbox() {
     if (lb.hidden) return;
     lb.hidden = true;
     document.body.style.overflow = modal.hidden ? '' : 'hidden';
+    syncInert();
     if (lbFocus && document.contains(lbFocus)) lbFocus.focus();
   }
   lb.addEventListener('touchstart', (e) => { touchX = e.touches[0].clientX; }, { passive: true });
@@ -729,10 +861,22 @@
 
   // ---------- 城市详情弹窗 ----------
   let lastFocus = null;
+  // 弹窗打开时背景不可操作（inert），焦点只在弹窗里转
+  function syncInert() {
+    const lbOpen = !lb.hidden, mOpen = !modal.hidden;
+    [document.querySelector('.topbar'), app, document.querySelector('.foot')].forEach((n) => { if (n) n.inert = lbOpen || mOpen; });
+    modal.inert = lbOpen && mOpen;
+  }
+
+  // 自己打开的弹窗记一条历史，手机返回键 / 侧滑能关掉它
+  let cityPushed = false;
   function openCity(c, cityId, fromRoute) {
     const city = c.cities.find((x) => x.id === cityId);
     if (!city) return;
-    if (!fromRoute) history.replaceState(null, '', `#/${c.id}/${city.id}`);
+    if (!fromRoute) {
+      if (cityPushed) history.replaceState(null, '', `#/${c.id}/${city.id}`);
+      else { history.pushState(null, '', `#/${c.id}/${city.id}`); cityPushed = true; }
+    }
     lastFocus = document.activeElement;
 
     const types = ['全部', ...new Set(city.spots.map((s) => s.type))];
@@ -740,7 +884,7 @@
     const spotList = el('div', { class: 'grid' });
     const drawSpots = () => spotList.replaceChildren(...city.spots.filter((s) => type === '全部' || s.type === type).map((s) =>
       el('div', { class: 'card spot' + (imgOf(c, s.img) ? ' has-img' : '') },
-        photo(c, s.img, 'spot-photo'),
+        photo(c, s.img, 'spot-photo', true, true),
         el('div', { class: 'spot-text' },
           el('div', { class: 'spot-top' },
             el('h5', null, s.name),
@@ -763,6 +907,8 @@
     modalCard.style.setProperty('--cc', city.color);
     modalCard.replaceChildren(
       el('button', { class: 'modal-close', type: 'button', 'aria-label': '关闭', onclick: closeCity }, '✕'),
+      el('div', { class: 'modal-scroll' },
+      el('span', { class: 'grab', 'aria-hidden': 'true' }),
       head,
       el('div', { class: 'm-body' },
         el('p', null, city.intro),
@@ -781,20 +927,45 @@
         city.tips && city.tips.length ? [
           el('h4', { class: 'sub-h' }, '小贴士'),
           el('ul', { class: 'dots' }, city.tips.map((t) => el('li', null, t)))
-        ] : null));
+        ] : null)));
     modal.hidden = false;
+    modalCard.style.transform = '';
     document.body.style.overflow = 'hidden';
-    modalCard.scrollTop = 0;
+    syncInert();
+    modalCard.querySelector('.modal-scroll').scrollTop = 0;
     modalCard.querySelector('.modal-close').focus();
   }
 
-  function closeCity() {
-    if (modal.hidden) return;
+  function hideCity() {
     modal.hidden = true;
     document.body.style.overflow = '';
-    if (current) history.replaceState(null, '', '#/' + current);
+    syncInert();
+  }
+  function closeCity() {
+    if (modal.hidden) return;
+    hideCity();
+    if (cityPushed) { cityPushed = false; history.back(); }
+    else if (current) history.replaceState(null, '', '#/' + current);
     if (lastFocus && document.contains(lastFocus)) lastFocus.focus();
   }
+
+  // 手机上在弹窗顶部往下拉可以关闭
+  let pull = null;
+  modalCard.addEventListener('touchstart', (e) => {
+    const sc = modalCard.querySelector('.modal-scroll');
+    pull = sc && sc.scrollTop <= 0 ? { y: e.touches[0].clientY, dy: 0 } : null;
+  }, { passive: true });
+  modalCard.addEventListener('touchmove', (e) => {
+    if (!pull) return;
+    pull.dy = Math.max(0, e.touches[0].clientY - pull.y);
+    modalCard.style.transform = pull.dy ? `translateY(${pull.dy}px)` : '';
+  }, { passive: true });
+  modalCard.addEventListener('touchend', () => {
+    if (!pull) return;
+    const dy = pull.dy; pull = null;
+    modalCard.style.transform = '';
+    if (dy > 110) closeCity();
+  });
 
   modal.addEventListener('click', (e) => { if (e.target.hasAttribute('data-close')) closeCity(); });
   document.addEventListener('keydown', (e) => {
@@ -812,10 +983,13 @@
   // #/japan       国家页
   // #/japan/tokyo 国家页 + 打开城市详情
   function route() {
+    if (globe) { globe.destroy(); globe = null; }
+    renderToken++;
     const parts = location.hash.replace(/^#\/?/, '').split('/').filter(Boolean);
     const [cid, cityId] = parts;
-    if (!modal.hidden) { modal.hidden = true; document.body.style.overflow = ''; }
-    if (!lb.hidden) { lb.hidden = true; document.body.style.overflow = ''; }
+    if (!lb.hidden) { lb.hidden = true; document.body.style.overflow = ''; syncInert(); }
+    if (!modal.hidden && !(parts[1] && parts[0] === current)) hideCity();
+    if (!parts[1]) cityPushed = false;
     if (!cid || !byId[cid] || byId[cid].status !== 'live') {
       current = null;
       renderHome();
