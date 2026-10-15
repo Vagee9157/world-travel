@@ -6,7 +6,29 @@
   const TRAVEL = window.TRAVEL = window.TRAVEL || { countries: {} };
   TRAVEL.register = function (data) { TRAVEL.countries[data.id] = data; };
   const INDEX = window.TRAVEL_INDEX || [];
-  const byId = Object.fromEntries(INDEX.map((c) => [c.id, c]));
+  const CHINA = window.CHINA_INDEX || [];
+  INDEX.forEach((c) => { c.scope = 'world'; });
+  CHINA.forEach((c) => { c.scope = 'china'; });
+  const byId = Object.fromEntries([...INDEX, ...CHINA].map((c) => [c.id, c]));
+
+  // 两个 tab：环游世界 / 中国游，各自一套目的地、地图和文案
+  const SCOPES = {
+    world: {
+      list: INDEX, path: '#/', tab: '环游世界', title: '环游世界 · 旅行卡片', back: '← 环游世界',
+      eyebrow: 'Around the World · 旅行卡片集', h1: ['转动地球，', '挑下一站'],
+      lede: '每个国家整理成一套卡片：怎么排行程、怎么飞、去哪些城市、看哪些人文景点、当地有什么讲究，再学几句能用上的当地话。先从日本和韩国开始，后面一个个点亮。',
+      hint: '拖动旋转 · 点国家看看', selKey: 'globeSel', defaultSel: 'japan',
+      stats: ['个国家已上线', '座城市', '条行程', '句旅行用语'], view: null
+    },
+    china: {
+      list: CHINA, path: '#/china', tab: '中国游', title: '中国游 · 旅行卡片', back: '← 中国游',
+      eyebrow: 'China · 一城一套卡片', h1: ['走遍中国，', '一城一站'],
+      lede: '国内城市也整理成一套卡片：怎么去、住哪一片、吃什么、逛哪些老街和博物馆，再学几句当地话。先从广州开始。',
+      hint: '拖动看看 · 点城市', selKey: 'chinaSel', defaultSel: 'guangzhou',
+      stats: ['座城市已上线', '个片区', '条行程', '句当地话'],
+      view: { center: [108.5, 33], zoom: 2.4, pan: 14, landUrl: 'assets/data/eastasia-land-50m.json?v=1' }
+    }
+  };
 
   const app = document.getElementById('app');
   const modal = document.getElementById('modal');
@@ -68,7 +90,7 @@
     if (!meta || meta.status !== 'live' || !meta.file) return Promise.reject(new Error('unknown country'));
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = meta.file + '?v=6';
+      s.src = meta.file + '?v=7';
       s.onload = () => TRAVEL.countries[id] ? resolve(TRAVEL.countries[id]) : reject(new Error('not registered'));
       s.onerror = () => reject(new Error('load failed'));
       document.head.append(s);
@@ -81,8 +103,10 @@
     if (!canSpeak) return;
     const u = new SpeechSynthesisUtterance(text.replace(/（[^）]*）|\([^)]*\)/g, '').replace(/〜|~/g, ''));
     u.lang = lang;
-    const prefix = lang.slice(0, 2);
-    const voice = speechSynthesis.getVoices().find((v) => v.lang.replace('_', '-').toLowerCase().startsWith(prefix));
+    const norm = (x) => x.replace('_', '-').toLowerCase(), want = norm(lang), voices = speechSynthesis.getVoices();
+    // 粤语只认 zh-HK / yue，找不到就交给浏览器，不拿普通话顶替
+    const voice = voices.find((v) => norm(v.lang) === want)
+      || (want === 'zh-hk' ? voices.find((v) => /^(yue|zh-hk)/.test(norm(v.lang))) : voices.find((v) => norm(v.lang).startsWith(want.slice(0, 2))));
     if (voice) u.voice = voice;
     u.rate = 0.85;
     speechSynthesis.cancel();
@@ -115,16 +139,17 @@
   }
 
   // ---------- 顶部导航 ----------
-  function renderTopnav(active) {
+  function renderTopnav(active, scope) {
     topnav.replaceChildren(
-      el('a', { href: '#/', 'aria-current': active ? null : 'page' }, '全部目的地'),
-      ...INDEX.filter((c) => c.status === 'live').map((c) =>
+      ...Object.entries(SCOPES).map(([k, sc]) => el('a', { href: sc.path, class: 'scope-link', 'aria-current': !active && scope === k ? 'page' : null }, sc.tab)),
+      el('span', { class: 'nav-sep', 'aria-hidden': 'true' }),
+      ...SCOPES[scope].list.filter((c) => c.status === 'live').map((c) =>
         el('a', { href: '#/' + c.id, 'aria-current': active === c.id ? 'page' : null }, c.name))
     );
   }
 
   // ---------- 首页 ----------
-  let homeRegion = '全部';
+  const homeRegion = { world: '全部', china: '全部' };
   // 出发城市（地球上的航线起点，和各国「航班交通」里的出发地对应）
   const ORIGINS = [
     { name: '北京', lonlat: [116.4, 39.9] }, { name: '上海', lonlat: [121.47, 31.23] },
@@ -134,28 +159,30 @@
   let globe = null;
   let renderToken = 0;
 
-  function renderHome() {
+  function renderHome(scope) {
     const token = ++renderToken;
-    document.title = '环游世界 · 旅行卡片';
+    const SC = SCOPES[scope], LIST = SC.list;
+    document.title = SC.title;
     setTheme(null);
-    renderTopnav(null);
-    const live = INDEX.filter((c) => c.status === 'live');
+    renderTopnav(null, scope);
+    const live = LIST.filter((c) => c.status === 'live');
     app.replaceChildren(el('div', { class: 'loading' }, '正在展开地图…'));
     Promise.all(live.map((c) => loadCountry(c.id).catch(() => null))).then(() => {
       if (token !== renderToken) return;
       const loaded = live.map((c) => TRAVEL.countries[c.id]).filter(Boolean);
       const sum = (fn) => loaded.reduce((n, c) => n + fn(c), 0);
-      const regions = ['全部', ...new Set(INDEX.map((c) => c.region))];
+      const regions = ['全部', ...new Set(LIST.map((c) => c.region))];
+      if (!regions.includes(homeRegion[scope])) homeRegion[scope] = '全部';
 
       const grid = el('div', { class: 'postcards' });
       const drawGrid = () => {
-        grid.replaceChildren(...INDEX.filter((c) => homeRegion === '全部' || c.region === homeRegion).map(postcard));
+        grid.replaceChildren(...LIST.filter((c) => homeRegion[scope] === '全部' || c.region === homeRegion[scope]).map(postcard));
       };
       const chips = el('div', { class: 'chips', role: 'group', 'aria-label': '按地区筛选' },
         regions.map((r) => el('button', {
-          class: 'chip', type: 'button', 'aria-pressed': String(r === homeRegion),
+          class: 'chip', type: 'button', 'aria-pressed': String(r === homeRegion[scope]),
           onclick: (e) => {
-            homeRegion = r;
+            homeRegion[scope] = r;
             chips.querySelectorAll('.chip').forEach((x) => x.setAttribute('aria-pressed', String(x === e.currentTarget)));
             drawGrid();
           }
@@ -164,17 +191,17 @@
 
       // ---- 地球 + 选中目的地卡片
       let origin = ORIGINS.find((o) => o.name === store.get('origin', '深圳')) || ORIGINS[3];
-      let selId = store.get('globeSel', 'japan');
-      if (!byId[selId]) selId = live[0] ? live[0].id : INDEX[0].id;
+      let selId = store.get(SC.selKey, SC.defaultSel);
+      if (!LIST.some((m) => m.id === selId)) selId = live[0] ? live[0].id : LIST[0].id;
       const cardHost = el('div', { class: 'dest-host', 'aria-live': 'polite' });
       const pills = el('div', { class: 'dest-pills', role: 'group', 'aria-label': '选择目的地' });
       const showCard = (id) => {
         selId = id;
-        store.set('globeSel', id);
+        store.set(SC.selKey, id);
         cardHost.replaceChildren(destCard(byId[id], origin));
         pills.querySelectorAll('button').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.id === id)));
       };
-      pills.append(...INDEX.map((m) => el('button', {
+      pills.append(...LIST.map((m) => el('button', {
         type: 'button', class: 'pill' + (m.status === 'live' ? ' live' : ''), 'data-id': m.id, style: { '--pc': m.accent },
         onclick: () => { if (globe) globe.select(m.id); else showCard(m.id); }
       }, el('i', { 'aria-hidden': 'true' }), m.name)));
@@ -191,30 +218,32 @@
       const hasGlobe = window.Globe && Globe.available();
 
       app.replaceChildren(
-        el('section', { class: 'wrap home-hero globe-hero' + (hasGlobe ? '' : ' no-globe') },
+        el('section', { class: 'wrap home-hero globe-hero scope-' + scope + (hasGlobe ? '' : ' no-globe') },
           el('div', { class: 'gh-intro' },
-            el('div', { class: 'eyebrow' }, 'Around the World · 旅行卡片集'),
-            el('h1', null, '转动地球，', el('em', null, '挑下一站')),
-            el('p', { class: 'lede' }, '每个国家整理成一套卡片：怎么排行程、怎么飞、去哪些城市、看哪些人文景点、当地有什么讲究，再学几句能用上的当地话。先从日本和韩国开始，后面一个个点亮。'),
+            el('nav', { class: 'scope-tabs', 'aria-label': '切换' }, Object.entries(SCOPES).map(([k, x]) =>
+              el('a', { href: x.path, 'aria-current': k === scope ? 'page' : null }, x.tab))),
+            el('div', { class: 'eyebrow' }, SC.eyebrow),
+            el('h1', null, SC.h1[0], el('em', null, SC.h1[1])),
+            el('p', { class: 'lede' }, SC.lede),
             el('label', { class: 'origin' }, '从 ', originSel, ' 出发')),
           hasGlobe ? el('div', { class: 'gh-globe' },
             globeHost,
-            el('p', { class: 'globe-hint' }, '拖动旋转 · 点国家看看')) : null,
+            el('p', { class: 'globe-hint' }, SC.hint)) : null,
           el('div', { class: 'gh-card' },
             pills,
             cardHost,
             el('div', { class: 'stats' },
-              stat(loaded.length, '个国家已上线'),
-              stat(sum((c) => c.cities.length), '座城市'),
-              stat(sum((c) => c.itineraries.length), '条行程'),
-              stat(sum((c) => c.language.phrases.reduce((n, g) => n + g.items.length, 0)), '句旅行用语')))),
-        el('section', { class: 'wrap' }, el('h2', { class: 'home-h2' }, '全部目的地'), chips, grid),
-        wishStrip()
+              stat(loaded.length, SC.stats[0]),
+              stat(sum((c) => c.cities.length), SC.stats[1]),
+              stat(sum((c) => c.itineraries.length), SC.stats[2]),
+              stat(sum((c) => c.language.phrases.reduce((n, g) => n + g.items.length, 0)), SC.stats[3])))),
+        el('section', { class: 'wrap' }, el('h2', { class: 'home-h2' }, scope === 'china' ? '全部城市' : '全部目的地'), chips, grid),
+        wishStrip(LIST)
       );
 
       if (hasGlobe) {
         globe = Globe.create(globeHost, {
-          places: INDEX, origin, selected: selId,
+          places: LIST, origin, selected: selId, view: SC.view,
           onSelect: (p) => showCard(p.id),
           onError: () => { const h = app.querySelector('.globe-hint'); if (h) h.textContent = '世界地图没加载出来，用目的地按钮也能选'; }
         });
@@ -250,6 +279,10 @@
     }
     const cover = imgOf(c, 'cover');
     const route = c.flights.routes.find((r) => r.from.includes(origin.name));
+    const china = meta.scope === 'china';
+    const routeLine = china
+      ? (origin.name === meta.name ? '📍 就在本地，直接开逛' : route ? `🚄 ${origin.name}出发：${route.duration}（${route.airlines}）` : `🚄 从${origin.name}出发：看攻略里的「交通」`)
+      : '✈ ' + (route ? `${origin.name}直飞${route.to}${route.duration}` : `从${origin.name}出发：看攻略里的「航班交通」`);
     const best = c.seasons.filter((x) => x.rating >= 5).map((x) => x.name).join('、');
     return el('a', { class: 'dest-card live' + (cover ? ' has-img' : ''), href: '#/' + meta.id, style: { '--pc': meta.accent } },
       cover ? el('img', { class: 'dc-img', src: thumbOf(cover), alt: '', decoding: 'async' }) : el('div', { class: 'dc-img dc-type', 'aria-hidden': 'true' }, meta.nameLocal),
@@ -258,7 +291,7 @@
         el('h3', null, meta.name, el('small', null, meta.nameEn)),
         el('p', null, c.tagline),
         el('ul', { class: 'dc-facts' },
-          el('li', null, '✈ ', route ? `${origin.name}直飞${route.to}${route.duration}` : `从${origin.name}出发：看攻略里的「航班交通」`),
+          el('li', null, routeLine),
           el('li', null, `${c.cities.length} 座城市 · ${c.itineraries.length} 条行程`),
           best ? el('li', null, `最舒服的季节：${best}`) : null,
           localTime(meta) ? el('li', null, localTime(meta)) : null),
@@ -289,9 +322,10 @@
     return el('div', { class: 'postcard soon', style: { '--pc': meta.accent }, 'aria-disabled': 'true' }, inner);
   }
 
-  function wishStrip() {
+  function wishStrip(list) {
     const items = store.get('wish', []).map((k) => {
       const [cid, cityId] = k.split('/');
+      if (!list.some((m) => m.id === cid)) return null;
       const c = TRAVEL.countries[cid];
       const city = c && c.cities.find((x) => x.id === cityId);
       return city ? el('a', { href: `#/${cid}/${cityId}` }, '♥ ', c.name, ' · ', city.name) : null;
@@ -313,21 +347,24 @@
 
   function renderCountry(c) {
     current = c.id;
-    document.title = `${c.name}旅行卡片 · 环游世界`;
     setTheme(c.theme);
-    renderTopnav(c.id);
+    const scope = (byId[c.id] && byId[c.id].scope) || 'world';
+    document.title = `${c.name}旅行卡片 · ${SCOPES[scope].tab}`;
+    renderTopnav(c.id, scope);
+    // 数据可以改章节名，比如广州把「城市」叫「片区」、「语言」叫「粤语」
+    const L = (id, title, desc) => { const o = (c.labels || {})[id] || {}; return [o.title || title, o.desc || desc]; };
 
     // 章节按数据有无决定是否出现，编号自动排
     const secs = [
       ['overview', '速览', '什么时候去、要准备什么、大概花多少钱', overview],
       ['itinerary', '行程', '照着走就行的路线，点城市名看详情', itineraries],
-      ['flights', '航班交通', '从国内怎么飞，落地后怎么走', flights],
-      ['cities', '城市', '点卡片看景点、美食和住哪', cities],
+      ['flights', ...L('flights', '航班交通', '从国内怎么飞，落地后怎么走'), flights],
+      ['cities', ...L('cities', '城市', '点卡片看景点、美食和住哪'), cities],
       c.foodGuide && ['food', '美食', '必吃清单和吃饭的规矩', food],
       c.festivals && ['festivals', '节庆', '一年里的祭典和季节活动', festivals],
       (c.stays || c.shopping) && ['stay', '住宿购物', '住哪种、买什么、怎么免税', staysShopping],
       ['culture', '人文礼仪', '入乡随俗，少踩坑', culture],
-      ['language', '语言', `${c.language.name}速成：认字母、学句子、听发音`, language],
+      ['language', ...L('language', '语言', `${c.language.name}速成：认字母、学句子、听发音`), language],
       ['practical', '实用信息', 'App、付钱、上网、看病', practical],
       ['checklist', '出发清单', '勾选进度保存在本机浏览器', checklist],
       c.images && ['credits', '相册', '点开看大图，图片均为 Wikimedia Commons 上的自由许可作品', credits]
@@ -392,7 +429,7 @@
       el('section', { class: 'c-hero' + (cover ? ' has-img' : ''), 'data-local': c.nameLocal },
         el('div', { class: 'wrap c-hero-in' },
           el('div', { class: 'c-hero-text' },
-            el('a', { class: 'back', href: '#/' }, '← 全部目的地'),
+            el('a', { class: 'back', href: SCOPES[scope].path }, SCOPES[scope].back),
             el('h1', null, c.name, el('span', { class: 'en' }, c.nameEn)),
             el('p', { class: 'tagline' }, c.tagline),
             el('p', { class: 'intro' }, c.intro),
@@ -1022,7 +1059,7 @@
     if (!parts[1]) cityPushed = false;
     if (!cid || !byId[cid] || byId[cid].status !== 'live') {
       current = null;
-      renderHome();
+      renderHome(cid === 'china' ? 'china' : 'world');
       window.scrollTo(0, 0);
       return;
     }

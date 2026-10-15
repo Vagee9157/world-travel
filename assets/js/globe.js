@@ -3,19 +3,21 @@
 (function () {
   'use strict';
 
-  let worldPromise = null;
-  function loadWorld(retry) {
-    if (!worldPromise) {
-      worldPromise = fetch('assets/data/countries-110m.json?v=1')
-        .then((r) => { if (!r.ok) throw new Error('world map ' + r.status); return r.json(); })
-        .then((topo) => topojson.feature(topo, topo.objects.countries).features)
+  // 底图：世界用 countries-110m（topojson，带国家，用来高亮）；区域图用裁好的海岸线 GeoJSON（不含任何边界）
+  const WORLD_URL = 'assets/data/countries-110m.json?v=1';
+  const cache = {};
+  function loadLand(url, retry) {
+    if (!cache[url]) {
+      cache[url] = fetch(url)
+        .then((r) => { if (!r.ok) throw new Error('map ' + r.status); return r.json(); })
+        .then((d) => (d.type === 'Topology' ? topojson.feature(d, d.objects.countries).features : d.features))
         .catch((e) => {
-          worldPromise = null;
-          if (retry) return new Promise((res) => setTimeout(res, 2000)).then(() => loadWorld(false));
+          delete cache[url];
+          if (retry) return new Promise((res) => setTimeout(res, 2000)).then(() => loadLand(url, false));
           throw e;
         });
     }
-    return worldPromise;
+    return cache[url];
   }
 
   const dark = window.matchMedia('(prefers-color-scheme: dark)');
@@ -54,6 +56,7 @@
 
   function create(host, opts) {
     const places = opts.places;
+    const view = opts.view || null;   // { center:[lon,lat], zoom, pan, landUrl }：区域地图，不自转、只能小范围拖动
     let origin = opts.origin;
     const canvas = document.createElement('canvas');
     canvas.className = 'globe-canvas';
@@ -71,7 +74,7 @@
     const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
     let W = 0, R = 0, dpr = 1;
-    let rotation = [-122, -24, 0];
+    let rotation = view ? [-view.center[0], -view.center[1], 0] : [-122, -24, 0];
     let land = null, shapes = {};
     let selected = opts.selected || null;
     let colors = readColors();
@@ -85,6 +88,18 @@
       const cx = W / 2, cy = W / 2, c = colors;
       let g = back.getContext('2d');
       g.setTransform(dpr, 0, 0, dpr, 0, 0);
+      if (view) {
+        // 区域图：整块画布都是海，四角压暗一点
+        const sea = g.createRadialGradient(cx - W * 0.2, cy - W * 0.25, W * 0.05, cx, cy, W * 0.8);
+        sea.addColorStop(0, c.oceanHi); sea.addColorStop(1, c.ocean);
+        g.fillStyle = sea; g.fillRect(0, 0, W, W);
+        g = front.getContext('2d');
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        const vig = g.createRadialGradient(cx, cy, W * 0.35, cx, cy, W * 0.75);
+        vig.addColorStop(0, 'rgba(0,0,0,0)'); vig.addColorStop(1, c.edge);
+        g.fillStyle = vig; g.fillRect(0, 0, W, W);
+        return;
+      }
       const glow = g.createRadialGradient(cx, cy, R * 0.92, cx, cy, R * 1.16);
       glow.addColorStop(0, c.glow); glow.addColorStop(1, 'rgba(0,0,0,0)');
       g.fillStyle = glow; g.beginPath(); g.arc(cx, cy, R * 1.16, 0, Math.PI * 2); g.fill();
@@ -107,7 +122,7 @@
       canvas.height = Math.round(W * dpr);
       canvas.style.width = W + 'px';
       canvas.style.height = W + 'px';
-      R = W / 2 * 0.84;
+      R = W / 2 * 0.84 * (view ? view.zoom : 1);
       projection.translate([W / 2, W / 2]).scale(R);
       paintLayers();
       draw(performance.now());
@@ -124,7 +139,13 @@
       for (let i = 0; i <= 40; i++) {
         const t = i / 40, ll = interp(t);
         if (!facing(ll, -0.05)) { pts.push(null); continue; }
-        const [x, y] = projection(ll), k = 1 + lift * Math.sin(Math.PI * t);
+        const [x, y] = projection(ll);
+        if (view) {
+          const [ax, ay] = projection(a), [bx, by] = projection(b);
+          pts.push([x, y - Math.hypot(bx - ax, by - ay) * 0.22 * Math.sin(Math.PI * t), t]);
+          continue;
+        }
+        const k = 1 + lift * Math.sin(Math.PI * t);
         pts.push([W / 2 + (x - W / 2) * k, W / 2 + (y - W / 2) * k, t]);
       }
       return pts;
@@ -212,6 +233,7 @@
       for (const p of order) {
         if (!facing(p.lonlat)) continue;
         const [x, y] = projection(p.lonlat);
+        if (x < -10 || y < -10 || x > W + 10 || y > W + 10) continue;
         pts.push({ p, x, y });
         hits.push({ p, x, y });
         taken.push({ x: x - 6, y: y - 6, w: 12, h: 12 });
@@ -263,6 +285,12 @@
     function animating() {
       return !!fly || !!drag || Math.abs(velocity) > 0.01 || !reduceMotion;
     }
+    // 区域图只能在中心附近拖动
+    function limit(rot) {
+      if (!view) return rot;
+      const p = view.pan || 15;
+      return [clamp(rot[0], -view.center[0] - p, -view.center[0] + p), clamp(rot[1], -view.center[1] - p * 0.7, -view.center[1] + p * 0.7), 0];
+    }
 
     function frame(now) {
       raf = 0;
@@ -278,8 +306,9 @@
         if (Math.abs(velocity) > 0.01) {
           rotation[0] += velocity * dt / 16.7;
           velocity *= Math.pow(0.94, dt / 16.7);
+          rotation = limit(rotation);
           busy = true;
-        } else if (!reduceMotion && now - lastInteract > idleAfter) {
+        } else if (!view && !reduceMotion && now - lastInteract > idleAfter) {
           rotation[0] += AUTO_SPEED * dt;
         }
       } else busy = true;
@@ -293,7 +322,7 @@
 
     function flyTo(lonlat) {
       const from = rotation.slice();
-      const to = [-lonlat[0], clamp(-lonlat[1] * 0.85, -55, 55)];
+      const to = view ? limit([-lonlat[0], -lonlat[1]]) : [-lonlat[0], clamp(-lonlat[1] * 0.85, -55, 55)];
       const d0 = ((to[0] - from[0]) % 360 + 540) % 360 - 180;
       lastInteract = performance.now();
       idleAfter = 12000;   // 选中后多停一会儿再继续自转
@@ -307,7 +336,7 @@
       let best = null, bd = 18;
       for (const h of hits) { const d = Math.hypot(h.x - x, h.y - y); if (d < bd) { bd = d; best = h.p; } }
       if (best) return best;
-      if (Math.hypot(x - W / 2, y - W / 2) > R) return null;
+      if (!view && Math.hypot(x - W / 2, y - W / 2) > R) return null;
       const ll = projection.invert([x, y]);
       if (!ll) return null;
       return places.find((p) => shapes[p.id] && d3.geoContains(shapes[p.id], ll)) || null;
@@ -347,7 +376,7 @@
       }
       if (!drag.moved) return;
       velocity = (x - drag.x) * k;
-      rotation = [drag.rot[0] + (x - drag.x0) * k, clamp(drag.rot[1] - (y - drag.y0) * k, -60, 60), 0];
+      rotation = limit([drag.rot[0] + (x - drag.x0) * k, clamp(drag.rot[1] - (y - drag.y0) * k, -60, 60), 0]);
       drag.x = x; drag.y = y;
       lastInteract = performance.now();
     });
@@ -380,11 +409,11 @@
     running = true;
     kick();
 
-    loadWorld(true).then((features) => {
+    loadLand(view ? view.landUrl : WORLD_URL, true).then((features) => {
       if (!running) return;
       land = { type: 'FeatureCollection', features };
       const byIso = Object.fromEntries(features.map((f) => [String(f.id), f]));
-      for (const p of places) shapes[p.id] = nearPart(byIso[p.iso], p.lonlat);
+      if (!view) for (const p of places) shapes[p.id] = nearPart(byIso[p.iso], p.lonlat);
       draw(performance.now());
     }).catch(() => { if (running && opts.onError) opts.onError(); });
 

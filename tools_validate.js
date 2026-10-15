@@ -8,7 +8,7 @@ const ctx = { window: {}, TRAVEL: null };
 ctx.TRAVEL = { countries: {}, register(d) { this.countries[d.id] = d; } };
 vm.createContext(ctx);
 vm.runInContext(fs.readFileSync(path.join(__dirname, 'assets/data/index.js'), 'utf8'), ctx);
-const index = ctx.window.TRAVEL_INDEX;
+const index = [...ctx.window.TRAVEL_INDEX, ...(ctx.window.CHINA_INDEX || [])];
 
 const errors = [];
 const err = (where, msg) => errors.push(`${where}: ${msg}`);
