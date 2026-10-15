@@ -152,7 +152,7 @@
     if (!meta || meta.status !== 'live' || !meta.file) return Promise.reject(new Error('unknown country'));
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = meta.file + '?v=11';
+      s.src = meta.file + '?v=12';
       s.onload = () => TRAVEL.countries[id] ? resolve(TRAVEL.countries[id]) : reject(new Error('not registered'));
       s.onerror = () => reject(new Error('load failed'));
       document.head.append(s);
@@ -435,23 +435,19 @@
     const L = (id, title, desc) => { const o = (c.labels || {})[id] || {}; return [o.title || title, o.desc || desc]; };
 
     // 章节按数据有无决定是否出现，编号自动排
+    // 合并后的 8 个章节：景点 = 必去 + 按城市逛 + 相册；人文历史 = 历史 + 礼仪
+    const citiesLabel = L('cities', '城市', '')[0];
     const secs = [
-      ['overview', '速览', '什么时候去、要准备什么、大概花多少钱', overview],
-      ['top', '必去景点', '最值得去的地方，点卡片看详情', topSection],
-      c.history && ['history', '历史', '时代、大事记和人物，点开看相关景点', historySection],
-      ['itinerary', '行程', '照着走就行的路线，点城市名看详情', itineraries],
-      ['flights', ...L('flights', '航班交通', '从国内怎么飞，落地后怎么走'), flights],
-      ['cities', ...L('cities', '城市', '点卡片看景点、美食和住哪'), cities],
+      ['overview', '速览', '什么时候去、大概花多少钱', overview],
+      ['spots', '景点', `必去景点和按${citiesLabel}逛，点卡片看详情`, (x) => spotsSection(x, citiesLabel)],
+      ['itinerary', '行程', '照着走就行的路线', itineraries],
+      ['flights', ...L('flights', '交通', '怎么去，到了怎么走'), flights],
       c.foodGuide && ['food', '美食', '必吃清单和吃饭的规矩', food],
-      c.festivals && ['festivals', '节庆', '一年里的祭典和季节活动', festivals],
-      (c.stays || c.shopping) && ['stay', '住宿购物', '住哪种、买什么、怎么免税', staysShopping],
-      ['culture', '人文礼仪', '入乡随俗，少踩坑', culture],
+      ['culture', '人文历史', c.history ? '时代、大事记、人物和当地礼仪' : '入乡随俗，少踩坑', humanities],
       ['language', ...L('language', '语言', `${c.language.name}速成：认字母、学句子、听发音`), language],
-      ['practical', '实用信息', 'App、付钱、上网、看病', practical],
-      ['checklist', '出发清单', '勾选进度保存在本机浏览器', checklist],
-      c.images && ['credits', '相册', '点开看大图，图片均为 Wikimedia Commons 上的自由许可作品', credits]
+      ['checklist', '出发清单', '必备物品 + 目的地专属，勾选进度存在本机', checklist]
     ].filter(Boolean);
-    const navLabel = { credits: '相册' };
+    const navLabel = {};
     const label = (sec) => navLabel[sec[0]] || sec[1];
     const tabKey = 'tab:' + c.id;
     const navWrap = el('div', { class: 'wrap', role: 'tablist', 'aria-label': '章节' });
@@ -661,6 +657,29 @@
             el('small', null, [p.years, p.role].filter(Boolean).join(' · '))),
           el('span', { class: 'chev', 'aria-hidden': 'true' })
         ], [p.local && p.local !== p.name ? el('p', { class: 'lc', lang: c.lang.code }, p.local) : null, el('p', null, p.desc), p.ref ? el('div', { class: 'day-spots' }, refBtn(p.ref)) : null])))
+    ];
+  }
+
+  function spotsSection(c, citiesLabel) {
+    return [
+      el('h3', { class: 'sub-h first' }, '⭐ 必去景点', el('small', { class: 'count' }, Math.min(16, (c.topSpots || []).length || 16))),
+      topSection(c),
+      el('h3', { class: 'sub-h' }, `🗺 按${citiesLabel}逛`, el('small', { class: 'count' }, c.cities.length)),
+      cities(c),
+      c.images ? fold('gallery-fold callout-fold', [
+        el('span', { class: 't-ico', 'aria-hidden': 'true' }, '📷'),
+        el('span', { class: 't-title' }, '全部照片'),
+        el('span', { class: 't-val' }, `${Object.keys(c.images).length} 张 · 点开看大图`),
+        el('span', { class: 'chev', 'aria-hidden': 'true' })
+      ], credits(c)) : null
+    ];
+  }
+
+  function humanities(c) {
+    return [
+      c.history ? historySection(c) : null,
+      el('h3', { class: 'sub-h' }, '🙇 当地礼仪', el('small', { class: 'count' }, c.culture.length)),
+      culture(c)
     ];
   }
 
@@ -1001,33 +1020,78 @@
       tile(p.icon, p.title, el('span', { class: 't-val' }, `${p.points.length} 条`), bullets(p.points), i === 0 && /问题|紧急|求助/.test(p.title) ? 'urgent' : '')));
   }
 
+  // 出发清单：通用必备（出国 / 国内两套）+ 目的地专属；底部放应急和必装 App
+  const ESSENTIALS = {
+    world: [
+      { cat: '证件', icon: '🛂', items: ['护照（有效期 6 个月以上）', '签证 / 入境许可', '机票、酒店订单截图（离线也能看）', '旅行保险保单', '护照照片页复印件或照片'] },
+      { cat: '钱和支付', icon: '💳', items: ['少量当地现金', 'Visa / 万事达 / 银联卡各一张', '支付宝 / 微信绑好卡'] },
+      { cat: '手机电子', icon: '🔌', items: ['手机和充电器', '充电宝（随身带，不能托运）', '转换插头', 'eSIM / 流量卡', '离线地图和翻译 App'] },
+      { cat: '衣物', icon: '🧥', items: ['按季节带衣服（看速览里的月份图）', '一双好走的鞋', '雨具和防晒'] },
+      { cat: '药品洗护', icon: '💊', items: ['常用药：感冒、肠胃、晕车、创可贴', '个人处方药和说明书', '洗护小样、口罩'] }
+    ],
+    china: [
+      { cat: '证件', icon: '🪪', items: ['身份证（港澳台居民带对应证件）', '车票、酒店订单截图', '学生证 / 老年证（景点有优惠）'] },
+      { cat: '钱和支付', icon: '💳', items: ['微信 / 支付宝余额或绑卡', '少量现金（小店、市场）', '交通卡或乘车码先开通'] },
+      { cat: '手机电子', icon: '🔌', items: ['手机和充电器', '充电宝（坐飞机随身带）', '地图、打车、订票 App 登录好'] },
+      { cat: '衣物', icon: '🧥', items: ['按季节带衣服（看速览里的月份图）', '一双好走的鞋', '雨具和防晒'] },
+      { cat: '药品洗护', icon: '💊', items: ['常用药：感冒、肠胃、创可贴', '个人处方药', '驱蚊、口罩'] }
+    ]
+  };
   function checklist(c) {
-    const key = 'check:' + c.id;
+    const scope = (byId[c.id] && byId[c.id].scope) || 'world';
+    // 目的地专属事项按关键词归到对应分类里（📌 标出），对应的通用项就不再重复列
+    const CAT_RULES = [
+      ['证件', /护照|签证|身份证|入境|Visit Japan|e-Arrival|保险|港澳|证件/],
+      ['钱和支付', /现金|换钱|换.*(日元|韩元|外币)|银联|信用卡|支付|Suica|T-money|交通卡|乘车码|羊城通/],
+      ['手机电子', /eSIM|Wi-?Fi|流量|插头|转换头|App|地图|Naver|Papago|充电/],
+      ['衣物', /衣|鞋|雨具|伞|防晒|保暖/],
+      ['药品洗护', /药|口罩|驱蚊/]
+    ];
+    const OVERLAP = [[/护照/, /护照/], [/签证/, /签证/], [/保险/, /保险/], [/现金/, /现金|换.*(日元|韩元|外币)/], [/转换插头/, /插头|转换头/],
+      [/eSIM|流量/, /eSIM|Wi-?Fi|流量/], [/离线地图|地图、打车/, /离线地图|Naver|地图/], [/订单/, /订好酒店|订单/], [/交通卡|乘车码/, /交通卡|Suica|T-money|乘车码/], [/身份证/, /身份证/],
+      [/好走的鞋/, /鞋/], [/充电宝/, /充电宝/], [/手机和充电器/, /充电/], [/按季节带衣服/, /衣服|天气预报/], [/雨具/, /雨具|伞/]];
+    const covered = (t) => OVERLAP.some(([g, d]) => g.test(t) && c.checklist.some((x) => d.test(x)));
+    const home = (t) => (CAT_RULES.find(([, re]) => re.test(t)) || ['行程预约'])[0];
+    const mine = (cat) => c.checklist.filter((t) => home(t) === cat).map((t) => ({ t, own: true }));
+    const groups = [
+      ...ESSENTIALS[scope].map((g) => ({ ...g, items: [...mine(g.cat), ...g.items.filter((t) => !covered(t)).map((t) => ({ t }))] })),
+      { cat: '行程预约', icon: '🎫', items: mine('行程预约') }
+    ].filter((g) => g.items.length).map((g) => ({ ...g, items: g.items }));
+    const all = groups.flatMap((g) => g.items.map((x) => x.t));
+    const key = 'pack:' + c.id;
     const meta = el('div', { class: 'check-meta' });
-    const list = el('div', { class: 'checklist' });
+    const bar = el('i');
     const drawMeta = () => {
-      const done = store.get(key, []);
+      const done = store.get(key, []).filter((t) => all.includes(t));
+      bar.style.width = (done.length / all.length * 100).toFixed(1) + '%';
       meta.replaceChildren(
-        el('span', null, `已完成 ${done.length} / ${c.checklist.length}`),
+        el('span', { class: 'progress' }, el('span', { class: 'bar' }, bar), `已准备 ${done.length} / ${all.length}`),
         ...(done.length ? [el('button', { class: 'linkbtn', type: 'button', onclick: () => { store.set(key, []); draw(); } }, '清空')] : []));
     };
+    const box = el('div', { class: 'pack' });
     const draw = () => {
       const done = store.get(key, []);
       drawMeta();
-      list.replaceChildren(...c.checklist.map((t, i) => el('label', { class: 'check' },
-        el('input', {
-          type: 'checkbox', checked: done.includes(i),
-          onchange: (e) => {
-            const cur = store.get(key, []).filter((x) => x !== i);
-            if (e.target.checked) cur.push(i);
-            store.set(key, cur);
-            drawMeta();
-          }
-        }),
-        el('span', null, t))));
+      box.replaceChildren(...groups.map((g) => el('div', { class: 'card pack-group' },
+        el('h4', null, el('span', { 'aria-hidden': 'true' }, g.icon), ' ', g.cat, el('small', null, g.items.length)),
+        el('div', { class: 'checklist' }, g.items.map(({ t, own }) => el('label', { class: 'check' + (own ? ' own' : '') },
+          el('input', {
+            type: 'checkbox', checked: done.includes(t),
+            onchange: (e) => {
+              const cur = store.get(key, []).filter((x) => x !== t);
+              if (e.target.checked) cur.push(t);
+              store.set(key, cur);
+              drawMeta();
+            }
+          }),
+          el('span', null, t), own ? el('span', { class: 'own-tag', title: `${c.name}专属` }, '📌') : null))))));
     };
     draw();
-    return [meta, list];
+    // 原「实用信息」里的应急和必装 App 留在这里
+    const keep = (c.practical || []).filter((p) => /问题|紧急|求助|App|应用/.test(p.title));
+    return [meta, box,
+      keep.length ? [el('h3', { class: 'sub-h' }, '🆘 应急和必装 App'),
+        el('div', { class: 'tiles' }, keep.map((p) => tile(p.icon, p.title, el('span', { class: 't-val' }, `${p.points.length} 条`), bullets(p.points), /问题|紧急|求助/.test(p.title) ? 'urgent' : '')))] : null];
   }
 
   // ---------- 看大图 ----------
